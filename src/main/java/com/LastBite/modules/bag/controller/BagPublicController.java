@@ -3,6 +3,8 @@ package com.LastBite.modules.bag.controller;
 import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.bag.dto.response.PublicBagDetailResponse;
 import com.LastBite.modules.bag.dto.response.PublicBagSummaryResponse;
+import com.LastBite.modules.bag.enums.BagType;
+import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.service.BagDiscoveryService;
 import com.LastBite.modules.store.enums.StoreCategory;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,9 +30,11 @@ public class BagPublicController {
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false, defaultValue = "5") Double radius,
+            @RequestParam(required = false) DietType dietType,
+            @RequestParam(required = false) BagType bagType,
             @RequestParam(defaultValue = "pickup_time") String sort,
             @RequestParam(required = false) Integer limit) {
-        return ResponseEntity.ok(ApiResponse.ok(discoveryService.today(lat, lng, radius, sort, limit)));
+        return ResponseEntity.ok(ApiResponse.ok(discoveryService.today(lat, lng, radius, dietType, bagType, sort, limit)));
     }
 
     @GetMapping("/nearby")
@@ -40,11 +44,13 @@ public class BagPublicController {
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false, defaultValue = "5") Double radius,
             @RequestParam(required = false) StoreCategory category,
+            @RequestParam(required = false) DietType dietType,
+            @RequestParam(required = false) BagType bagType,
             @RequestParam(required = false) String district,
             @RequestParam(defaultValue = "pickup_time") String sort,
             @RequestParam(required = false) Integer limit) {
         return ResponseEntity.ok(ApiResponse.ok(
-                discoveryService.discover(lat, lng, radius, category, district, sort, limit)));
+                discoveryService.discover(lat, lng, radius, category, dietType, bagType, district, sort, limit)));
     }
 
     @GetMapping("/{bagId}")

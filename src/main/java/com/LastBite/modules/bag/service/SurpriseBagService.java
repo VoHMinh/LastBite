@@ -18,6 +18,7 @@ import com.LastBite.modules.bag.entity.StockAuditLog;
 import com.LastBite.modules.bag.entity.SurpriseBag;
 import com.LastBite.modules.bag.enums.BagStatus;
 import com.LastBite.modules.bag.enums.DailyStockStatus;
+import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.enums.StockAuditAction;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagPriceTierRepository;
@@ -72,6 +73,7 @@ public class SurpriseBagService {
                 .name(request.getName().trim())
                 .description(trimToNull(request.getDescription()))
                 .bagType(request.getBagType() == null ? com.LastBite.modules.bag.enums.BagType.STANDARD : request.getBagType())
+                .dietType(request.getDietType() == null ? DietType.MEAT : request.getDietType())
                 .category(tier.getCategory())
                 .bagSize(tier.getBagSize())
                 .photos(toStringArray(request.getPhotos()))
@@ -114,6 +116,7 @@ public class SurpriseBagService {
         if (request.getName() != null && !request.getName().isBlank()) bag.setName(request.getName().trim());
         if (request.getDescription() != null) bag.setDescription(trimToNull(request.getDescription()));
         if (request.getBagType() != null) bag.setBagType(request.getBagType());
+        if (request.getDietType() != null) bag.setDietType(request.getDietType());
         if (request.getCategory() != null || request.getBagSize() != null) {
             var category = request.getCategory() != null ? request.getCategory() : bag.getCategory();
             var bagSize = request.getBagSize() != null ? request.getBagSize() : bag.getBagSize();
@@ -399,6 +402,7 @@ public class SurpriseBagService {
                 .name(bag.getName())
                 .description(bag.getDescription())
                 .bagType(bag.getBagType())
+                .dietType(bag.getDietType())
                 .category(bag.getCategory())
                 .bagSize(bag.getBagSize())
                 .photos(bag.getPhotos() == null ? List.of() : Arrays.asList(bag.getPhotos()))

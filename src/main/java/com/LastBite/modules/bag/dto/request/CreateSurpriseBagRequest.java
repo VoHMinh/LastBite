@@ -2,6 +2,7 @@ package com.LastBite.modules.bag.dto.request;
 
 import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.enums.BagSize;
+import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.store.enums.StoreCategory;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
@@ -23,6 +24,8 @@ public class CreateSurpriseBagRequest {
     private String description;
 
     private BagType bagType = BagType.STANDARD;
+
+    private DietType dietType = DietType.MEAT;
 
     @NotNull(message = "Danh mục túi không được để trống")
     private StoreCategory category;

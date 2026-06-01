@@ -2,6 +2,7 @@ package com.LastBite.modules.bag.dto.response;
 
 import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.enums.BagSize;
+import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.store.enums.StoreCategory;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,6 +33,7 @@ public class PublicBagSummaryResponse implements Serializable {
     private String name;
     private String description;
     private BagType bagType;
+    private DietType dietType;
     private StoreCategory category;
     private BagSize bagSize;
     private List<String> photos;

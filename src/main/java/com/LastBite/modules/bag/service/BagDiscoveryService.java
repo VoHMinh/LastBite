@@ -6,6 +6,7 @@ import com.LastBite.modules.bag.dto.response.PublicBagDetailResponse;
 import com.LastBite.modules.bag.dto.response.PublicBagSummaryResponse;
 import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.enums.BagType;
+import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagDiscoveryProjection;
 import com.LastBite.modules.store.enums.StoreCategory;
@@ -36,15 +37,17 @@ public class BagDiscoveryService {
     private final Clock clock;
 
     @Cacheable(value = "bag-discovery",
-            key = "'today:' + #lat + ':' + #lng + ':' + #radiusKm + ':' + #sort + ':' + #limit")
-    public List<PublicBagSummaryResponse> today(Double lat, Double lng, Double radiusKm, String sort, Integer limit) {
-        return discover(lat, lng, radiusKm, null, null, sort, limit);
+            key = "'today:' + #lat + ':' + #lng + ':' + #radiusKm + ':' + #dietType + ':' + #bagType + ':' + #sort + ':' + #limit")
+    public List<PublicBagSummaryResponse> today(Double lat, Double lng, Double radiusKm, DietType dietType,
+                                                BagType bagType, String sort, Integer limit) {
+        return discover(lat, lng, radiusKm, null, dietType, bagType, null, sort, limit);
     }
 
     @Cacheable(value = "bag-discovery",
-            key = "'nearby:' + #lat + ':' + #lng + ':' + #radiusKm + ':' + #category + ':' + #district + ':' + #sort + ':' + #limit")
+            key = "'nearby:' + #lat + ':' + #lng + ':' + #radiusKm + ':' + #category + ':' + #dietType + ':' + #bagType + ':' + #district + ':' + #sort + ':' + #limit")
     public List<PublicBagSummaryResponse> discover(Double lat, Double lng, Double radiusKm, StoreCategory category,
-                                                    String district, String sort, Integer limit) {
+                                                    DietType dietType, BagType bagType, String district,
+                                                    String sort, Integer limit) {
         String normalizedSort = normalizeSort(sort);
         int normalizedLimit = normalizeLimit(limit);
         int queryLimit = normalizedSort.equals("price")
@@ -53,6 +56,8 @@ public class BagDiscoveryService {
         LocalDate today = LocalDate.now(clock);
         LocalTime now = LocalTime.now(clock);
         String categoryValue = category == null ? null : category.name();
+        String dietTypeValue = dietType == null ? null : dietType.name();
+        String bagTypeValue = bagType == null ? null : bagType.name();
         String normalizedDistrict = normalize(district);
         boolean hasLat = lat != null;
         boolean hasLng = lng != null;
@@ -67,10 +72,10 @@ public class BagDiscoveryService {
         if (hasLat) {
             rows = stockRepository.discoverWithLocation(today, now, lat, lng,
                     radiusKm == null ? DEFAULT_RADIUS_KM : radiusKm,
-                    categoryValue, normalizedDistrict, normalizedSort, queryLimit);
+                    categoryValue, dietTypeValue, bagTypeValue, normalizedDistrict, normalizedSort, queryLimit);
         } else {
             rows = stockRepository.discoverWithoutLocation(today, now,
-                    categoryValue, normalizedDistrict, normalizedSort, queryLimit);
+                    categoryValue, dietTypeValue, bagTypeValue, normalizedDistrict, normalizedSort, queryLimit);
         }
         return sortSummaries(rows.stream().map(this::toSummary).toList(), normalizedSort, normalizedLimit);
     }
@@ -115,6 +120,7 @@ public class BagDiscoveryService {
                 .name(row.getName())
                 .description(row.getDescription())
                 .bagType(BagType.valueOf(row.getBagType()))
+                .dietType(DietType.valueOf(row.getDietType()))
                 .category(StoreCategory.valueOf(row.getCategory()))
                 .bagSize(BagSize.valueOf(row.getBagSize()))
                 .photos(parsePhotos(row.getPhotos()))
@@ -157,6 +163,7 @@ public class BagDiscoveryService {
                 .name(summary.getName())
                 .description(summary.getDescription())
                 .bagType(summary.getBagType())
+                .dietType(summary.getDietType())
                 .category(summary.getCategory())
                 .bagSize(summary.getBagSize())
                 .photos(summary.getPhotos())

@@ -3,10 +3,13 @@ package com.LastBite.modules.bag.service;
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.bag.dto.request.CreateSurpriseBagRequest;
+import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
 import com.LastBite.modules.bag.entity.BagPriceTier;
 import com.LastBite.modules.bag.entity.SurpriseBag;
 import com.LastBite.modules.bag.enums.BagSize;
+import com.LastBite.modules.bag.enums.BagStatus;
 import com.LastBite.modules.bag.enums.BagType;
+import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagPriceTierRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
@@ -77,6 +80,7 @@ class SurpriseBagServiceTest {
         verify(bagRepository).save(argThat(argument -> {
             SurpriseBag bag = (SurpriseBag) argument;
             assertEquals(StoreCategory.BAKERY, bag.getCategory());
+            assertEquals(DietType.MEAT, bag.getDietType());
             assertEquals(BagSize.STANDARD, bag.getBagSize());
             assertEquals(BigDecimal.valueOf(100000), bag.getMinimumValue());
             assertEquals(BigDecimal.valueOf(39000), bag.getBaseSalePrice());
@@ -116,6 +120,35 @@ class SurpriseBagServiceTest {
         verify(bagRepository).save(any());
     }
 
+    @Test
+    void createAcceptsExplicitDietType() {
+        CreateSurpriseBagRequest request = validRequest();
+        request.setDietType(DietType.VEGAN);
+
+        assertDoesNotThrow(() -> service.create(ownerId, request));
+
+        verify(bagRepository).save(argThat(argument -> {
+            SurpriseBag bag = (SurpriseBag) argument;
+            assertEquals(DietType.VEGAN, bag.getDietType());
+            return true;
+        }));
+    }
+
+    @Test
+    void updateChangesDietTypeWhenProvided() {
+        UUID bagId = UUID.randomUUID();
+        SurpriseBag bag = existingBag(bagId);
+        when(bagRepository.findByIdAndStoreOwnerId(bagId, ownerId)).thenReturn(Optional.of(bag));
+
+        var request = new com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest();
+        request.setDietType(DietType.VEGETARIAN);
+
+        SurpriseBagResponse response = service.update(ownerId, bagId, request);
+
+        assertEquals(DietType.VEGETARIAN, response.getDietType());
+        verify(bagRepository).save(argThat(argument -> ((SurpriseBag) argument).getDietType() == DietType.VEGETARIAN));
+    }
+
     private CreateSurpriseBagRequest validRequest() {
         CreateSurpriseBagRequest request = new CreateSurpriseBagRequest();
         request.setName("Tui banh cuoi ngay");
@@ -126,6 +159,41 @@ class SurpriseBagServiceTest {
         request.setPickupEndTime(LocalTime.of(21, 0));
         request.setAvailableDays(Set.of(1, 2, 3, 4, 5));
         return request;
+    }
+
+    private SurpriseBag existingBag(UUID bagId) {
+        Store store = Store.builder()
+                .name("Tiem banh Test")
+                .slug("tiem-banh-test")
+                .category(StoreCategory.BAKERY)
+                .address("Quan 1")
+                .status(StoreStatus.ACTIVE)
+                .verificationStatus(VerificationStatus.VERIFIED)
+                .build();
+        ReflectionTestUtils.setField(store, "id", UUID.randomUUID());
+
+        SurpriseBag bag = SurpriseBag.builder()
+                .store(store)
+                .name("Tui banh cuoi ngay")
+                .bagType(BagType.BREAD)
+                .dietType(DietType.MEAT)
+                .category(StoreCategory.BAKERY)
+                .bagSize(BagSize.STANDARD)
+                .photos(new String[0])
+                .minimumValue(BigDecimal.valueOf(100000))
+                .baseSalePrice(BigDecimal.valueOf(39000))
+                .dynamicMinPrice(BigDecimal.valueOf(35000))
+                .dynamicMaxPrice(BigDecimal.valueOf(45000))
+                .dynamicPricingEnabled(true)
+                .platformFee(BigDecimal.valueOf(4000))
+                .maxPerOrder(1)
+                .pickupStartTime(LocalTime.of(20, 0))
+                .pickupEndTime(LocalTime.of(21, 0))
+                .availableDays(new Integer[]{1, 2, 3, 4, 5})
+                .status(BagStatus.ACTIVE)
+                .build();
+        ReflectionTestUtils.setField(bag, "id", bagId);
+        return bag;
     }
 
     private BagPriceTier priceTier(StoreCategory category, BagSize bagSize) {

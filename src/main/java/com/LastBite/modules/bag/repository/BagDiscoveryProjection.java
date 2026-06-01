@@ -18,6 +18,7 @@ public interface BagDiscoveryProjection {
     String getName();
     String getDescription();
     String getBagType();
+    String getDietType();
     String getCategory();
     String getBagSize();
     String getPhotos();
