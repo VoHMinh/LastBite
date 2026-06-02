@@ -1,0 +1,21 @@
+info:
+  name: Delete Address
+  type: http
+  seq: 7
+
+http:
+  method: DELETE
+  url: "{{baseUrl}}/api/v1/users/me/addresses/:addressId"
+  params:
+    - name: addressId
+      value: "{{addressId}}"
+      type: path
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

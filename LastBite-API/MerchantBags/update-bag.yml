@@ -1,0 +1,39 @@
+info:
+  name: Update Bag
+  type: http
+  seq: 3
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/v1/merchant/bags/:bagId"
+  params:
+    - name: bagId
+      value: "{{bagId}}"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Updated Evening Bakery Rescue Bag",
+        "description": "Updated bag description",
+        "bagType": "BREAD",
+        "category": "BAKERY",
+        "bagSize": "STANDARD",
+        "photos": [
+          "https://example.com/bag-updated.jpg"
+        ],
+        "dynamicPricingEnabled": true,
+        "maxPerOrder": 2,
+        "pickupStartTime": "18:30:00",
+        "pickupEndTime": "20:30:00",
+        "availableDays": [1, 2, 3, 4, 5]
+      }
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

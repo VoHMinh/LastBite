@@ -1,0 +1,9 @@
+info:
+  name: Orders
+  type: folder
+  seq: 7
+
+request:
+  auth:
+    type: bearer
+    token: "{{accessToken}}"

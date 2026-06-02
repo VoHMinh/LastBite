@@ -1,0 +1,30 @@
+info:
+  name: Register Customer
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/v1/auth/register"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "customer@example.com",
+        "password": "Password@123",
+        "fullName": "Demo Customer",
+        "phone": "0900000001"
+      }
+  auth: none
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "201"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

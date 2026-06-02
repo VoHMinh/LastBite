@@ -1,0 +1,28 @@
+info:
+  name: Adjust Today Stock
+  type: http
+  seq: 8
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/v1/merchant/bags/:bagId/stock/today"
+  params:
+    - name: bagId
+      value: "{{bagId}}"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "delta": -1,
+        "reason": "Manual adjustment"
+      }
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,25 @@
+info:
+  name: Create Order
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/v1/orders"
+  body:
+    type: json
+    data: |-
+      {
+        "bagId": "{{bagId}}",
+        "quantity": 1,
+        "idempotencyKey": "manual-test-key-001"
+      }
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

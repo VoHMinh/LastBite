@@ -1,5 +1,6 @@
 package com.LastBite.modules.bag.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.enums.DietType;
@@ -26,6 +27,12 @@ public class PublicBagSummaryResponse implements Serializable {
     private String storeName;
     private String storeSlug;
     private String storeAddress;
+    private String storeLogoUrl;
+    private String storeCoverImageUrl;
+    private Double storeAvgRating;
+    private Integer storeTotalRatings;
+    @JsonProperty("isFavoriteStore")
+    private boolean favoriteStore;
     private String district;
     private String city;
     private Double lat;
@@ -47,6 +54,9 @@ public class PublicBagSummaryResponse implements Serializable {
     private boolean dynamicPricingEnabled;
     private BigDecimal platformFee;
     private int maxPerOrder;
+    private boolean containerProvided;
+    private boolean carrierBagProvided;
+    private String packagingNote;
     private LocalDate stockDate;
     private LocalTime pickupStartTime;
     private LocalTime pickupEndTime;

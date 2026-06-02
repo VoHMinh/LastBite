@@ -38,6 +38,13 @@ public class UpdateSurpriseBagRequest {
     @Max(value = 3, message = "Mỗi khách tối đa 3 túi/ngày/cửa hàng")
     private Integer maxPerOrder;
 
+    private Boolean containerProvided;
+
+    private Boolean carrierBagProvided;
+
+    @Size(max = 500, message = "Ghi chu bao bi toi da 500 ky tu")
+    private String packagingNote;
+
     private LocalTime pickupStartTime;
 
     private LocalTime pickupEndTime;

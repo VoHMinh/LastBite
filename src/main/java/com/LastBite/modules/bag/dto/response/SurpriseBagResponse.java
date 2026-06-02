@@ -37,6 +37,9 @@ public class SurpriseBagResponse {
     private boolean dynamicPricingEnabled;
     private BigDecimal platformFee;
     private int maxPerOrder;
+    private boolean containerProvided;
+    private boolean carrierBagProvided;
+    private String packagingNote;
     private LocalTime pickupStartTime;
     private LocalTime pickupEndTime;
     private List<Integer> availableDays;

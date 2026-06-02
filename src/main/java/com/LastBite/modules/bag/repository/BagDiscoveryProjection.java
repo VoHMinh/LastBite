@@ -11,6 +11,10 @@ public interface BagDiscoveryProjection {
     String getStoreName();
     String getStoreSlug();
     String getStoreAddress();
+    String getStoreLogoUrl();
+    String getStoreCoverImageUrl();
+    Double getStoreAvgRating();
+    Integer getStoreTotalRatings();
     String getDistrict();
     String getCity();
     Double getLat();
@@ -29,6 +33,9 @@ public interface BagDiscoveryProjection {
     Boolean getDynamicPricingEnabled();
     BigDecimal getPlatformFee();
     Integer getMaxPerOrder();
+    Boolean getContainerProvided();
+    Boolean getCarrierBagProvided();
+    String getPackagingNote();
     LocalTime getPickupStartTime();
     LocalTime getPickupEndTime();
     String getStatus();

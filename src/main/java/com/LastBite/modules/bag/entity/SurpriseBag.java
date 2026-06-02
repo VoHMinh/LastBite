@@ -86,6 +86,17 @@ public class SurpriseBag extends BaseEntity {
     @Builder.Default
     private int maxPerOrder = 1;
 
+    @Column(name = "container_provided", nullable = false)
+    @Builder.Default
+    private boolean containerProvided = true;
+
+    @Column(name = "carrier_bag_provided", nullable = false)
+    @Builder.Default
+    private boolean carrierBagProvided = true;
+
+    @Column(name = "packaging_note", length = 500)
+    private String packagingNote;
+
     @Column(name = "pickup_start_time", nullable = false)
     private LocalTime pickupStartTime;
 

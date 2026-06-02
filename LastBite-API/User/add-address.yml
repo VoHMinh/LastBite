@@ -1,0 +1,27 @@
+info:
+  name: Add Address
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/v1/users/me/addresses"
+  body:
+    type: json
+    data: |-
+      {
+        "label": "Home",
+        "fullAddress": "1 Demo Street, District 1, Ho Chi Minh",
+        "lat": 10.7769,
+        "lng": 106.7009,
+        "isDefault": true
+      }
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

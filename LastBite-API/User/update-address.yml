@@ -1,0 +1,31 @@
+info:
+  name: Update Address
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/v1/users/me/addresses/:addressId"
+  params:
+    - name: addressId
+      value: "{{addressId}}"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "label": "Office",
+        "fullAddress": "2 Demo Street, District 3, Ho Chi Minh",
+        "lat": 10.782,
+        "lng": 106.695,
+        "isDefault": false
+      }
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

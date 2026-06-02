@@ -41,6 +41,13 @@ public class CreateSurpriseBagRequest {
     @Max(value = 3, message = "Mỗi khách tối đa 3 túi/ngày/cửa hàng")
     private Integer maxPerOrder = 1;
 
+    private Boolean containerProvided = true;
+
+    private Boolean carrierBagProvided = true;
+
+    @Size(max = 500, message = "Ghi chu bao bi toi da 500 ky tu")
+    private String packagingNote;
+
     @NotNull(message = "Giờ bắt đầu pickup không được để trống")
     private LocalTime pickupStartTime;
 

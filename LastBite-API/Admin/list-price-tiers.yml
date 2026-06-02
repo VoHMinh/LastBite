@@ -1,0 +1,24 @@
+info:
+  name: List Price Tiers
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v1/admin/bag-price-tiers"
+  params:
+    - name: page
+      value: "0"
+      type: query
+    - name: size
+      value: "20"
+      type: query
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

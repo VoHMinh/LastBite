@@ -1,0 +1,35 @@
+info:
+  name: Create Bag
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/v1/merchant/bags"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Evening Bakery Rescue Bag",
+        "description": "Assorted baked goods from today",
+        "bagType": "BREAD",
+        "category": "BAKERY",
+        "bagSize": "STANDARD",
+        "photos": [
+          "https://example.com/bag.jpg"
+        ],
+        "dynamicPricingEnabled": true,
+        "maxPerOrder": 1,
+        "pickupStartTime": "18:00:00",
+        "pickupEndTime": "20:00:00",
+        "availableDays": [1, 2, 3, 4, 5]
+      }
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
