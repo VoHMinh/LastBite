@@ -32,3 +32,11 @@ jwt:
 app:
   cors:
     allowed-origins: http://localhost:3000
+  aws:
+    s3:
+      region: ap-southeast-1
+      bucket-name: lastbite
+      upload-expire-seconds: 300
+      max-image-size-mb: 5
+      max-video-size-mb: 50
+      public-base-url: https://lastbite.s3.amazonaws.com
