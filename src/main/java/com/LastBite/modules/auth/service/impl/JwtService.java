@@ -1,6 +1,7 @@
-package com.LastBite.modules.auth.service;
+package com.LastBite.modules.auth.service.impl;
 
 import com.LastBite.modules.auth.entity.User;
+import com.LastBite.modules.auth.service.JwtServicePort;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -28,7 +29,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
-public class JwtService {
+public class JwtService implements JwtServicePort {
 
     @Value("${jwt.signer-key}")
     private String signerKeyBase64;

@@ -1,4 +1,4 @@
-package com.LastBite.modules.bag.service;
+package com.LastBite.modules.bag.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -9,7 +9,9 @@ import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagDiscoveryProjection;
+import com.LastBite.modules.bag.service.BagDiscoveryServicePort;
 import com.LastBite.modules.store.enums.StoreCategory;
+import com.LastBite.modules.user.repository.FavoriteStoreRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -27,25 +29,26 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class BagDiscoveryService {
+public class BagDiscoveryService implements BagDiscoveryServicePort {
 
     private static final int DEFAULT_LIMIT = 50;
     private static final double DEFAULT_RADIUS_KM = 5.0;
 
     private final BagDailyStockRepository stockRepository;
+    private final FavoriteStoreRepository favoriteStoreRepository;
     private final BagPricingService pricingService;
     private final Clock clock;
 
     @Cacheable(value = "bag-discovery",
-            key = "'today:' + #lat + ':' + #lng + ':' + #radiusKm + ':' + #dietType + ':' + #bagType + ':' + #sort + ':' + #limit")
-    public List<PublicBagSummaryResponse> today(Double lat, Double lng, Double radiusKm, DietType dietType,
+            key = "'today:' + #userId + ':' + #lat + ':' + #lng + ':' + #radiusKm + ':' + #dietType + ':' + #bagType + ':' + #sort + ':' + #limit")
+    public List<PublicBagSummaryResponse> today(UUID userId, Double lat, Double lng, Double radiusKm, DietType dietType,
                                                 BagType bagType, String sort, Integer limit) {
-        return discover(lat, lng, radiusKm, null, dietType, bagType, null, sort, limit);
+        return discover(userId, lat, lng, radiusKm, null, dietType, bagType, null, sort, limit);
     }
 
     @Cacheable(value = "bag-discovery",
-            key = "'nearby:' + #lat + ':' + #lng + ':' + #radiusKm + ':' + #category + ':' + #dietType + ':' + #bagType + ':' + #district + ':' + #sort + ':' + #limit")
-    public List<PublicBagSummaryResponse> discover(Double lat, Double lng, Double radiusKm, StoreCategory category,
+            key = "'nearby:' + #userId + ':' + #lat + ':' + #lng + ':' + #radiusKm + ':' + #category + ':' + #dietType + ':' + #bagType + ':' + #district + ':' + #sort + ':' + #limit")
+    public List<PublicBagSummaryResponse> discover(UUID userId, Double lat, Double lng, Double radiusKm, StoreCategory category,
                                                     DietType dietType, BagType bagType, String district,
                                                     String sort, Integer limit) {
         String normalizedSort = normalizeSort(sort);
@@ -77,27 +80,27 @@ public class BagDiscoveryService {
             rows = stockRepository.discoverWithoutLocation(today, now,
                     categoryValue, dietTypeValue, bagTypeValue, normalizedDistrict, normalizedSort, queryLimit);
         }
-        return sortSummaries(rows.stream().map(this::toSummary).toList(), normalizedSort, normalizedLimit);
+        return sortSummaries(rows.stream().map(row -> toSummary(row, userId)).toList(), normalizedSort, normalizedLimit);
     }
 
-    @Cacheable(value = "bag-detail", key = "#bagId")
-    public PublicBagDetailResponse detail(UUID bagId) {
+    @Cacheable(value = "bag-detail", key = "#bagId + ':' + #userId")
+    public PublicBagDetailResponse detail(UUID bagId, UUID userId) {
         BagDiscoveryProjection row = stockRepository.findPublicBagDetail(bagId, LocalDate.now(clock), LocalTime.now(clock))
                 .orElseThrow(() -> new ApiException(ErrorCode.BAG_NOT_FOUND));
-        return toDetail(row);
+        return toDetail(row, userId);
     }
 
     @Cacheable(value = "store-bags", key = "#storeId + ':' + #limit")
     public List<PublicBagSummaryResponse> storeBags(UUID storeId, Integer limit) {
         return stockRepository.findPublicStoreBags(storeId, LocalDate.now(clock), LocalTime.now(clock), normalizeLimit(limit))
                 .stream()
-                .map(this::toSummary)
+                .map(row -> toSummary(row, null))
                 .sorted(Comparator.comparing(PublicBagSummaryResponse::isSoldOut)
                         .thenComparing(PublicBagSummaryResponse::getPickupStartTime))
                 .toList();
     }
 
-    private PublicBagSummaryResponse toSummary(BagDiscoveryProjection row) {
+    private PublicBagSummaryResponse toSummary(BagDiscoveryProjection row, UUID userId) {
         var price = pricingService.currentPrice(
                 row.getMinimumValue(),
                 row.getBaseSalePrice(),
@@ -113,6 +116,11 @@ public class BagDiscoveryService {
                 .storeName(row.getStoreName())
                 .storeSlug(row.getStoreSlug())
                 .storeAddress(row.getStoreAddress())
+                .storeLogoUrl(row.getStoreLogoUrl())
+                .storeCoverImageUrl(row.getStoreCoverImageUrl())
+                .storeAvgRating(row.getStoreAvgRating())
+                .storeTotalRatings(row.getStoreTotalRatings())
+                .favoriteStore(isFavoriteStore(userId, row.getStoreId()))
                 .district(row.getDistrict())
                 .city(row.getCity())
                 .lat(row.getLat())
@@ -134,6 +142,9 @@ public class BagDiscoveryService {
                 .dynamicPricingEnabled(Boolean.TRUE.equals(row.getDynamicPricingEnabled()))
                 .platformFee(row.getPlatformFee())
                 .maxPerOrder(valueOrZero(row.getMaxPerOrder()))
+                .containerProvided(Boolean.TRUE.equals(row.getContainerProvided()))
+                .carrierBagProvided(Boolean.TRUE.equals(row.getCarrierBagProvided()))
+                .packagingNote(row.getPackagingNote())
                 .stockDate(row.getStockDate())
                 .pickupStartTime(row.getPickupStartTime())
                 .pickupEndTime(row.getPickupEndTime())
@@ -148,14 +159,19 @@ public class BagDiscoveryService {
                 .build();
     }
 
-    private PublicBagDetailResponse toDetail(BagDiscoveryProjection row) {
-        PublicBagSummaryResponse summary = toSummary(row);
+    private PublicBagDetailResponse toDetail(BagDiscoveryProjection row, UUID userId) {
+        PublicBagSummaryResponse summary = toSummary(row, userId);
         return PublicBagDetailResponse.builder()
                 .bagId(summary.getBagId())
                 .storeId(summary.getStoreId())
                 .storeName(summary.getStoreName())
                 .storeSlug(summary.getStoreSlug())
                 .storeAddress(summary.getStoreAddress())
+                .storeLogoUrl(summary.getStoreLogoUrl())
+                .storeCoverImageUrl(summary.getStoreCoverImageUrl())
+                .storeAvgRating(summary.getStoreAvgRating())
+                .storeTotalRatings(summary.getStoreTotalRatings())
+                .favoriteStore(summary.isFavoriteStore())
                 .district(summary.getDistrict())
                 .city(summary.getCity())
                 .lat(summary.getLat())
@@ -177,6 +193,9 @@ public class BagDiscoveryService {
                 .dynamicPricingEnabled(summary.isDynamicPricingEnabled())
                 .platformFee(summary.getPlatformFee())
                 .maxPerOrder(summary.getMaxPerOrder())
+                .containerProvided(summary.isContainerProvided())
+                .carrierBagProvided(summary.isCarrierBagProvided())
+                .packagingNote(summary.getPackagingNote())
                 .stockDate(summary.getStockDate())
                 .pickupStartTime(summary.getPickupStartTime())
                 .pickupEndTime(summary.getPickupEndTime())
@@ -250,5 +269,9 @@ public class BagDiscoveryService {
 
     private int valueOrZero(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    private boolean isFavoriteStore(UUID userId, UUID storeId) {
+        return userId != null && favoriteStoreRepository.existsByUserIdAndStoreId(userId, storeId);
     }
 }

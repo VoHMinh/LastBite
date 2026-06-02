@@ -12,9 +12,9 @@ import com.LastBite.modules.auth.dto.request.ResendOtpRequest;
 import com.LastBite.modules.auth.dto.request.VerifyEmailRequest;
 import com.LastBite.modules.auth.dto.response.AuthResponse;
 import com.LastBite.modules.auth.dto.response.UserResponse;
-import com.LastBite.modules.auth.service.AuthService;
-import com.LastBite.modules.auth.service.GoogleAuthService;
-import com.LastBite.modules.auth.service.JwtService;
+import com.LastBite.modules.auth.service.AuthServicePort;
+import com.LastBite.modules.auth.service.GoogleAuthServicePort;
+import com.LastBite.modules.auth.service.JwtServicePort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -45,9 +45,9 @@ public class AuthController {
 
     private static final String REFRESH_COOKIE_NAME = "refresh_token";
 
-    private final AuthService authService;
-    private final GoogleAuthService googleAuthService;
-    private final JwtService jwtService;
+    private final AuthServicePort authService;
+    private final GoogleAuthServicePort googleAuthService;
+    private final JwtServicePort jwtService;
 
     @Value("${app.auth.refresh-cookie-secure:false}")
     private boolean refreshCookieSecure;

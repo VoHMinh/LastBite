@@ -5,6 +5,7 @@ import com.LastBite.modules.bag.dto.admin.BagPriceTierRequest;
 import com.LastBite.modules.bag.entity.BagPriceTier;
 import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.repository.BagPriceTierRepository;
+import com.LastBite.modules.bag.service.impl.AdminBagPriceTierService;
 import com.LastBite.modules.store.enums.StoreCategory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

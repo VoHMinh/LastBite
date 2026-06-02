@@ -14,6 +14,8 @@ import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagPriceTierRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.repository.SurpriseBagRepository;
+import com.LastBite.modules.bag.service.impl.BagPricingService;
+import com.LastBite.modules.bag.service.impl.SurpriseBagService;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.enums.StoreStatus;
@@ -34,6 +36,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -86,6 +89,9 @@ class SurpriseBagServiceTest {
             assertEquals(BigDecimal.valueOf(39000), bag.getBaseSalePrice());
             assertEquals(BigDecimal.valueOf(35000), bag.getDynamicMinPrice());
             assertEquals(BigDecimal.valueOf(45000), bag.getDynamicMaxPrice());
+            assertEquals(true, bag.isContainerProvided());
+            assertEquals(true, bag.isCarrierBagProvided());
+            assertEquals("We recommend bringing your own bag.", bag.getPackagingNote());
             return true;
         }));
     }
@@ -135,6 +141,26 @@ class SurpriseBagServiceTest {
     }
 
     @Test
+    void createAcceptsCustomPackaging() {
+        CreateSurpriseBagRequest request = validRequest();
+        request.setContainerProvided(false);
+        request.setCarrierBagProvided(true);
+        request.setPackagingNote("Bring a clean cup.");
+
+        SurpriseBagResponse response = service.create(ownerId, request);
+
+        assertFalse(response.isContainerProvided());
+        assertEquals(true, response.isCarrierBagProvided());
+        assertEquals("Bring a clean cup.", response.getPackagingNote());
+        verify(bagRepository).save(argThat(argument -> {
+            SurpriseBag bag = (SurpriseBag) argument;
+            return !bag.isContainerProvided()
+                    && bag.isCarrierBagProvided()
+                    && "Bring a clean cup.".equals(bag.getPackagingNote());
+        }));
+    }
+
+    @Test
     void updateChangesDietTypeWhenProvided() {
         UUID bagId = UUID.randomUUID();
         SurpriseBag bag = existingBag(bagId);
@@ -142,10 +168,16 @@ class SurpriseBagServiceTest {
 
         var request = new com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest();
         request.setDietType(DietType.VEGETARIAN);
+        request.setContainerProvided(false);
+        request.setCarrierBagProvided(false);
+        request.setPackagingNote("No bag provided today.");
 
         SurpriseBagResponse response = service.update(ownerId, bagId, request);
 
         assertEquals(DietType.VEGETARIAN, response.getDietType());
+        assertFalse(response.isContainerProvided());
+        assertFalse(response.isCarrierBagProvided());
+        assertEquals("No bag provided today.", response.getPackagingNote());
         verify(bagRepository).save(argThat(argument -> ((SurpriseBag) argument).getDietType() == DietType.VEGETARIAN));
     }
 
@@ -187,6 +219,9 @@ class SurpriseBagServiceTest {
                 .dynamicPricingEnabled(true)
                 .platformFee(BigDecimal.valueOf(4000))
                 .maxPerOrder(1)
+                .containerProvided(true)
+                .carrierBagProvided(true)
+                .packagingNote("We recommend bringing your own bag.")
                 .pickupStartTime(LocalTime.of(20, 0))
                 .pickupEndTime(LocalTime.of(21, 0))
                 .availableDays(new Integer[]{1, 2, 3, 4, 5})

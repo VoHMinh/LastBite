@@ -1,4 +1,4 @@
-package com.LastBite.modules.user.service;
+package com.LastBite.modules.user.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -7,6 +7,7 @@ import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.user.dto.request.ChangePasswordRequest;
 import com.LastBite.modules.user.dto.request.UpdateProfileRequest;
+import com.LastBite.modules.user.service.UserServicePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -20,7 +21,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements UserServicePort {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;

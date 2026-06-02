@@ -1,4 +1,4 @@
-package com.LastBite.modules.order.service;
+package com.LastBite.modules.order.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -12,12 +12,13 @@ import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.bag.enums.StockAuditAction;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
-import com.LastBite.modules.bag.service.BagPricingService;
+import com.LastBite.modules.bag.service.impl.BagPricingService;
 import com.LastBite.modules.order.dto.request.CreateOrderRequest;
 import com.LastBite.modules.order.dto.response.OrderResponse;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.repository.OrderRepository;
+import com.LastBite.modules.order.service.OrderServicePort;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class OrderService {
+public class OrderService implements OrderServicePort {
 
     private static final Duration RESERVATION_TTL = Duration.ofMinutes(10);
 

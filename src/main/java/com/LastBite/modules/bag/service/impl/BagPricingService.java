@@ -1,4 +1,4 @@
-package com.LastBite.modules.bag.service;
+package com.LastBite.modules.bag.service.impl;
 
 import com.LastBite.modules.bag.entity.SurpriseBag;
 import lombok.Builder;

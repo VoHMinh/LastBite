@@ -1,4 +1,4 @@
-package com.LastBite.modules.auth.service;
+package com.LastBite.modules.auth.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -17,8 +17,10 @@ import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.enums.UserStatus;
 import com.LastBite.modules.auth.repository.EmailVerificationTokenRepository;
 import com.LastBite.modules.auth.repository.UserRepository;
+import com.LastBite.modules.auth.service.AuthServicePort;
+import com.LastBite.modules.auth.service.JwtServicePort;
 import com.LastBite.modules.store.dto.request.CreateStoreRequest;
-import com.LastBite.modules.store.service.StoreService;
+import com.LastBite.modules.store.service.StoreServicePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,13 +37,13 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AuthService {
+public class AuthService implements AuthServicePort {
 
     private final UserRepository userRepository;
-    private final JwtService jwtService;
+    private final JwtServicePort jwtService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
-    private final StoreService storeService;
+    private final StoreServicePort storeService;
     private final EmailVerificationTokenRepository emailTokenRepository;
     private final EmailService emailService;
 

@@ -5,7 +5,7 @@ import com.LastBite.common.response.PageResponse;
 import com.LastBite.modules.bag.dto.admin.BagPriceTierRequest;
 import com.LastBite.modules.bag.dto.admin.BagPriceTierResponse;
 import com.LastBite.modules.bag.dto.admin.UpdateBagPriceTierRequest;
-import com.LastBite.modules.bag.service.AdminBagPriceTierService;
+import com.LastBite.modules.bag.service.AdminBagPriceTierServicePort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,7 +26,7 @@ import java.util.UUID;
 @Tag(name = "Admin Bag Price Tiers", description = "Quản lý bảng giá túi bất ngờ do nền tảng cấu hình")
 public class AdminBagPriceTierController {
 
-    private final AdminBagPriceTierService tierService;
+    private final AdminBagPriceTierServicePort tierService;
 
     @GetMapping
     @Operation(summary = "Danh sách gói giá")

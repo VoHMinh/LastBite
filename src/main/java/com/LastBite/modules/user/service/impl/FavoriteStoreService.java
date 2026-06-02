@@ -1,4 +1,4 @@
-package com.LastBite.modules.user.service;
+package com.LastBite.modules.user.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -8,6 +8,7 @@ import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.repository.StoreRepository;
 import com.LastBite.modules.user.entity.FavoriteStore;
 import com.LastBite.modules.user.repository.FavoriteStoreRepository;
+import com.LastBite.modules.user.service.FavoriteStoreServicePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +18,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class FavoriteStoreService {
+public class FavoriteStoreService implements FavoriteStoreServicePort {
 
     private final FavoriteStoreRepository favoriteStoreRepository;
     private final UserRepository userRepository;

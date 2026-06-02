@@ -5,12 +5,14 @@ import com.LastBite.modules.bag.dto.response.PublicBagDetailResponse;
 import com.LastBite.modules.bag.dto.response.PublicBagSummaryResponse;
 import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.enums.DietType;
-import com.LastBite.modules.bag.service.BagDiscoveryService;
+import com.LastBite.modules.bag.service.BagDiscoveryServicePort;
 import com.LastBite.modules.store.enums.StoreCategory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,11 +24,12 @@ import java.util.UUID;
 @Tag(name = "Túi bất ngờ (Công khai)", description = "Discovery và xem chi tiết túi hôm nay")
 public class BagPublicController {
 
-    private final BagDiscoveryService discoveryService;
+    private final BagDiscoveryServicePort discoveryService;
 
     @GetMapping("/today")
     @Operation(summary = "Lấy danh sách túi hôm nay trong bán kính X km")
     public ResponseEntity<ApiResponse<List<PublicBagSummaryResponse>>> today(
+            @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false, defaultValue = "5") Double radius,
@@ -34,12 +37,14 @@ public class BagPublicController {
             @RequestParam(required = false) BagType bagType,
             @RequestParam(defaultValue = "pickup_time") String sort,
             @RequestParam(required = false) Integer limit) {
-        return ResponseEntity.ok(ApiResponse.ok(discoveryService.today(lat, lng, radius, dietType, bagType, sort, limit)));
+        return ResponseEntity.ok(ApiResponse.ok(discoveryService.today(
+                extractUserId(jwt), lat, lng, radius, dietType, bagType, sort, limit)));
     }
 
     @GetMapping("/nearby")
     @Operation(summary = "Tìm túi gần khách hoặc fallback theo quận")
     public ResponseEntity<ApiResponse<List<PublicBagSummaryResponse>>> nearby(
+            @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false, defaultValue = "5") Double radius,
@@ -50,12 +55,18 @@ public class BagPublicController {
             @RequestParam(defaultValue = "pickup_time") String sort,
             @RequestParam(required = false) Integer limit) {
         return ResponseEntity.ok(ApiResponse.ok(
-                discoveryService.discover(lat, lng, radius, category, dietType, bagType, district, sort, limit)));
+                discoveryService.discover(
+                        extractUserId(jwt), lat, lng, radius, category, dietType, bagType, district, sort, limit)));
     }
 
     @GetMapping("/{bagId}")
     @Operation(summary = "Lấy chi tiết túi hôm nay")
-    public ResponseEntity<ApiResponse<PublicBagDetailResponse>> detail(@PathVariable UUID bagId) {
-        return ResponseEntity.ok(ApiResponse.ok(discoveryService.detail(bagId)));
+    public ResponseEntity<ApiResponse<PublicBagDetailResponse>> detail(@AuthenticationPrincipal Jwt jwt,
+                                                                       @PathVariable UUID bagId) {
+        return ResponseEntity.ok(ApiResponse.ok(discoveryService.detail(bagId, extractUserId(jwt))));
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return jwt == null ? null : UUID.fromString(jwt.getClaimAsString("user_id"));
     }
 }

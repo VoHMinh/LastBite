@@ -1,4 +1,4 @@
-package com.LastBite.modules.store.service;
+package com.LastBite.modules.store.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -16,6 +16,7 @@ import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
 import com.LastBite.modules.store.repository.StoreReliabilityStatsRepository;
 import com.LastBite.modules.store.repository.StoreRepository;
+import com.LastBite.modules.store.service.StoreServicePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -32,7 +33,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StoreService {
+public class StoreService implements StoreServicePort {
 
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;

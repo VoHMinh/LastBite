@@ -1,6 +1,6 @@
 package com.LastBite.modules.bag.job;
 
-import com.LastBite.modules.bag.service.SurpriseBagService;
+import com.LastBite.modules.bag.service.SurpriseBagServicePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class BagStockJob {
 
-    private final SurpriseBagService surpriseBagService;
+    private final SurpriseBagServicePort surpriseBagService;
 
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Ho_Chi_Minh")
     public void createTodayStocks() {

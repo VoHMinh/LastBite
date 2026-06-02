@@ -10,6 +10,7 @@ import com.LastBite.modules.store.enums.VerificationStatus;
 import com.LastBite.modules.store.repository.StoreRepository;
 import com.LastBite.modules.user.entity.FavoriteStore;
 import com.LastBite.modules.user.repository.FavoriteStoreRepository;
+import com.LastBite.modules.user.service.impl.FavoriteStoreService;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 

@@ -9,7 +9,7 @@ import com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest;
 import com.LastBite.modules.bag.dto.response.DailyStockResponse;
 import com.LastBite.modules.bag.dto.response.StockAuditLogResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
-import com.LastBite.modules.bag.service.SurpriseBagService;
+import com.LastBite.modules.bag.service.SurpriseBagServicePort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,7 +34,7 @@ import java.util.UUID;
 @Tag(name = "Merchant Bags", description = "Quản lý túi bất ngờ và tồn kho theo ngày")
 public class MerchantBagController {
 
-    private final SurpriseBagService bagService;
+    private final SurpriseBagServicePort bagService;
 
     @PostMapping
     @Operation(summary = "Tạo túi bất ngờ")

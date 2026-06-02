@@ -1,4 +1,4 @@
-package com.LastBite.modules.store.service;
+package com.LastBite.modules.store.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -8,6 +8,7 @@ import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.enums.VerificationStatus;
 import com.LastBite.modules.store.repository.StoreRepository;
+import com.LastBite.modules.store.service.StoreQueryServicePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -21,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class StoreQueryService {
+public class StoreQueryService implements StoreQueryServicePort {
 
     private final StoreRepository storeRepository;
 

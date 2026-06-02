@@ -1,4 +1,4 @@
-package com.LastBite.modules.auth.service;
+package com.LastBite.modules.auth.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -8,6 +8,8 @@ import com.LastBite.modules.auth.enums.AuthProvider;
 import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.enums.UserStatus;
 import com.LastBite.modules.auth.repository.UserRepository;
+import com.LastBite.modules.auth.service.GoogleAuthServicePort;
+import com.LastBite.modules.auth.service.JwtServicePort;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -36,10 +38,10 @@ import java.util.Collections;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class GoogleAuthService {
+public class GoogleAuthService implements GoogleAuthServicePort {
 
     private final UserRepository userRepository;
-    private final JwtService jwtService;
+    private final JwtServicePort jwtService;
     private final RefreshTokenService refreshTokenService;
 
     @Value("${app.google.client-id:}")

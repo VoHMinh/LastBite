@@ -1,4 +1,4 @@
-package com.LastBite.modules.bag.service;
+package com.LastBite.modules.bag.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -9,6 +9,7 @@ import com.LastBite.modules.bag.dto.admin.UpdateBagPriceTierRequest;
 import com.LastBite.modules.bag.entity.BagPriceTier;
 import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.repository.BagPriceTierRepository;
+import com.LastBite.modules.bag.service.AdminBagPriceTierServicePort;
 import com.LastBite.modules.store.enums.StoreCategory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -21,7 +22,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class AdminBagPriceTierService {
+public class AdminBagPriceTierService implements AdminBagPriceTierServicePort {
 
     private final BagPriceTierRepository tierRepository;
 

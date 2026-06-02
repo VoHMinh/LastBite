@@ -1,10 +1,11 @@
-package com.LastBite.modules.auth.service;
+package com.LastBite.modules.auth.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.modules.auth.entity.RefreshToken;
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.repository.RefreshTokenRepository;
+import com.LastBite.modules.auth.service.JwtServicePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -28,7 +29,7 @@ public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final StringRedisTemplate redisTemplate;
-    private final JwtService jwtService;
+    private final JwtServicePort jwtService;
 
     @Transactional
     public String createRefreshToken(User user) {

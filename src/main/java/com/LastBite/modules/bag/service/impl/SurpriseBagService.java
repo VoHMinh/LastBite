@@ -1,4 +1,4 @@
-package com.LastBite.modules.bag.service;
+package com.LastBite.modules.bag.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -24,6 +24,7 @@ import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagPriceTierRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.repository.SurpriseBagRepository;
+import com.LastBite.modules.bag.service.SurpriseBagServicePort;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
@@ -46,11 +47,12 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SurpriseBagService {
+public class SurpriseBagService implements SurpriseBagServicePort {
 
     private static final int MAX_STOCK_PER_DAY = 50;
     private static final int MIN_PICKUP_MINUTES = 30;
     private static final int MAX_PICKUP_MINUTES = 240;
+    private static final String DEFAULT_PACKAGING_NOTE = "We recommend bringing your own bag.";
 
     private final SurpriseBagRepository bagRepository;
     private final BagDailyStockRepository stockRepository;
@@ -84,6 +86,11 @@ public class SurpriseBagService {
                 .dynamicPricingEnabled(request.getDynamicPricingEnabled() == null || request.getDynamicPricingEnabled())
                 .platformFee(tier.getPlatformFee())
                 .maxPerOrder(request.getMaxPerOrder() == null ? 1 : request.getMaxPerOrder())
+                .containerProvided(request.getContainerProvided() == null || request.getContainerProvided())
+                .carrierBagProvided(request.getCarrierBagProvided() == null || request.getCarrierBagProvided())
+                .packagingNote(request.getPackagingNote() == null
+                        ? DEFAULT_PACKAGING_NOTE
+                        : trimToNull(request.getPackagingNote()))
                 .pickupStartTime(request.getPickupStartTime())
                 .pickupEndTime(request.getPickupEndTime())
                 .availableDays(toDayArray(request.getAvailableDays().stream().toList()))
@@ -125,6 +132,9 @@ public class SurpriseBagService {
         if (request.getPhotos() != null) bag.setPhotos(toStringArray(request.getPhotos()));
         if (request.getDynamicPricingEnabled() != null) bag.setDynamicPricingEnabled(request.getDynamicPricingEnabled());
         if (request.getMaxPerOrder() != null) bag.setMaxPerOrder(request.getMaxPerOrder());
+        if (request.getContainerProvided() != null) bag.setContainerProvided(request.getContainerProvided());
+        if (request.getCarrierBagProvided() != null) bag.setCarrierBagProvided(request.getCarrierBagProvided());
+        if (request.getPackagingNote() != null) bag.setPackagingNote(trimToNull(request.getPackagingNote()));
         if (request.getPickupStartTime() != null) bag.setPickupStartTime(request.getPickupStartTime());
         if (request.getPickupEndTime() != null) bag.setPickupEndTime(request.getPickupEndTime());
         if (request.getAvailableDays() != null) bag.setAvailableDays(toDayArray(request.getAvailableDays().stream().toList()));
@@ -416,6 +426,9 @@ public class SurpriseBagService {
                 .dynamicPricingEnabled(bag.isDynamicPricingEnabled())
                 .platformFee(bag.getPlatformFee())
                 .maxPerOrder(bag.getMaxPerOrder())
+                .containerProvided(bag.isContainerProvided())
+                .carrierBagProvided(bag.isCarrierBagProvided())
+                .packagingNote(bag.getPackagingNote())
                 .pickupStartTime(bag.getPickupStartTime())
                 .pickupEndTime(bag.getPickupEndTime())
                 .availableDays(Arrays.stream(bag.getAvailableDays()).sorted().toList())

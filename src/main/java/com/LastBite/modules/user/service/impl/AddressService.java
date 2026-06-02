@@ -1,4 +1,4 @@
-package com.LastBite.modules.user.service;
+package com.LastBite.modules.user.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
@@ -8,6 +8,7 @@ import com.LastBite.modules.user.dto.request.AddressRequest;
 import com.LastBite.modules.user.dto.response.AddressResponse;
 import com.LastBite.modules.user.entity.UserAddress;
 import com.LastBite.modules.user.repository.UserAddressRepository;
+import com.LastBite.modules.user.service.AddressServicePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -21,7 +22,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AddressService {
+public class AddressService implements AddressServicePort {
 
     private static final int MAX_ADDRESSES = 10;
 

@@ -6,9 +6,9 @@ import com.LastBite.modules.user.dto.request.AddressRequest;
 import com.LastBite.modules.user.dto.request.ChangePasswordRequest;
 import com.LastBite.modules.user.dto.request.UpdateProfileRequest;
 import com.LastBite.modules.user.dto.response.AddressResponse;
-import com.LastBite.modules.user.service.AddressService;
-import com.LastBite.modules.user.service.FavoriteStoreService;
-import com.LastBite.modules.user.service.UserService;
+import com.LastBite.modules.user.service.AddressServicePort;
+import com.LastBite.modules.user.service.FavoriteStoreServicePort;
+import com.LastBite.modules.user.service.UserServicePort;
 import com.LastBite.modules.store.dto.response.StoreResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,9 +29,9 @@ import java.util.UUID;
 @Tag(name = "Hồ sơ người dùng", description = "Quản lý hồ sơ cá nhân và địa chỉ")
 public class UserController {
 
-    private final UserService userService;
-    private final AddressService addressService;
-    private final FavoriteStoreService favoriteStoreService;
+    private final UserServicePort userService;
+    private final AddressServicePort addressService;
+    private final FavoriteStoreServicePort favoriteStoreService;
 
     // ── Profile ──
 
