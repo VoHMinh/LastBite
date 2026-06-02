@@ -1,5 +1,6 @@
 package com.LastBite.modules.bag.service;
 
+import com.LastBite.modules.bag.service.impl.BagPricingService;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

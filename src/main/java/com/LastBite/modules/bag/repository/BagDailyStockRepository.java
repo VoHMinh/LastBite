@@ -55,6 +55,10 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
                 st.name AS "storeName",
                 st.slug AS "storeSlug",
                 st.address AS "storeAddress",
+                st.logo_url AS "storeLogoUrl",
+                st.cover_image_url AS "storeCoverImageUrl",
+                st.avg_rating AS "storeAvgRating",
+                st.total_ratings AS "storeTotalRatings",
                 st.district AS district,
                 st.city AS city,
                 st.lat AS lat,
@@ -62,6 +66,7 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
                 b.name AS name,
                 b.description AS description,
                 b.bag_type AS "bagType",
+                b.diet_type AS "dietType",
                 b.category AS category,
                 b.bag_size AS "bagSize",
                 array_to_string(b.photos, ',') AS photos,
@@ -72,6 +77,9 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
                 b.dynamic_pricing_enabled AS "dynamicPricingEnabled",
                 b.platform_fee AS "platformFee",
                 b.max_per_order AS "maxPerOrder",
+                b.container_provided AS "containerProvided",
+                b.carrier_bag_provided AS "carrierBagProvided",
+                b.packaging_note AS "packagingNote",
                 b.pickup_start_time AS "pickupStartTime",
                 b.pickup_end_time AS "pickupEndTime",
                 b.status AS status,
@@ -99,6 +107,8 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
               AND st.lat IS NOT NULL
               AND st.lng IS NOT NULL
               AND (:category IS NULL OR b.category = :category)
+              AND (:dietType IS NULL OR b.diet_type = :dietType)
+              AND (:bagType IS NULL OR b.bag_type = :bagType)
               AND (:district IS NULL OR LOWER(st.district) = LOWER(:district))
         )
         SELECT * FROM discovery
@@ -117,6 +127,8 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
                                                       @Param("lng") double lng,
                                                       @Param("radiusKm") double radiusKm,
                                                       @Param("category") String category,
+                                                      @Param("dietType") String dietType,
+                                                      @Param("bagType") String bagType,
                                                       @Param("district") String district,
                                                       @Param("sort") String sort,
                                                       @Param("limit") int limit);
@@ -128,6 +140,10 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             st.name AS "storeName",
             st.slug AS "storeSlug",
             st.address AS "storeAddress",
+            st.logo_url AS "storeLogoUrl",
+            st.cover_image_url AS "storeCoverImageUrl",
+            st.avg_rating AS "storeAvgRating",
+            st.total_ratings AS "storeTotalRatings",
             st.district AS district,
             st.city AS city,
             st.lat AS lat,
@@ -135,6 +151,7 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             b.name AS name,
             b.description AS description,
             b.bag_type AS "bagType",
+            b.diet_type AS "dietType",
             b.category AS category,
             b.bag_size AS "bagSize",
             array_to_string(b.photos, ',') AS photos,
@@ -145,6 +162,9 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             b.dynamic_pricing_enabled AS "dynamicPricingEnabled",
             b.platform_fee AS "platformFee",
             b.max_per_order AS "maxPerOrder",
+            b.container_provided AS "containerProvided",
+            b.carrier_bag_provided AS "carrierBagProvided",
+            b.packaging_note AS "packagingNote",
             b.pickup_start_time AS "pickupStartTime",
             b.pickup_end_time AS "pickupEndTime",
             b.status AS status,
@@ -166,6 +186,8 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
           AND st.verification_status = 'VERIFIED'
           AND b.pickup_end_time > :nowTime
           AND (:category IS NULL OR b.category = :category)
+          AND (:dietType IS NULL OR b.diet_type = :dietType)
+          AND (:bagType IS NULL OR b.bag_type = :bagType)
           AND (:district IS NULL OR LOWER(st.district) = LOWER(:district))
         ORDER BY
             CASE WHEN (s.quantity - s.reserved - s.sold) <= 0 THEN 1 ELSE 0 END ASC,
@@ -176,6 +198,8 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
     List<BagDiscoveryProjection> discoverWithoutLocation(@Param("date") LocalDate date,
                                                          @Param("nowTime") LocalTime nowTime,
                                                          @Param("category") String category,
+                                                         @Param("dietType") String dietType,
+                                                         @Param("bagType") String bagType,
                                                          @Param("district") String district,
                                                          @Param("sort") String sort,
                                                          @Param("limit") int limit);
@@ -187,6 +211,10 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             st.name AS "storeName",
             st.slug AS "storeSlug",
             st.address AS "storeAddress",
+            st.logo_url AS "storeLogoUrl",
+            st.cover_image_url AS "storeCoverImageUrl",
+            st.avg_rating AS "storeAvgRating",
+            st.total_ratings AS "storeTotalRatings",
             st.district AS district,
             st.city AS city,
             st.lat AS lat,
@@ -194,6 +222,7 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             b.name AS name,
             b.description AS description,
             b.bag_type AS "bagType",
+            b.diet_type AS "dietType",
             b.category AS category,
             b.bag_size AS "bagSize",
             array_to_string(b.photos, ',') AS photos,
@@ -204,6 +233,9 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             b.dynamic_pricing_enabled AS "dynamicPricingEnabled",
             b.platform_fee AS "platformFee",
             b.max_per_order AS "maxPerOrder",
+            b.container_provided AS "containerProvided",
+            b.carrier_bag_provided AS "carrierBagProvided",
+            b.packaging_note AS "packagingNote",
             b.pickup_start_time AS "pickupStartTime",
             b.pickup_end_time AS "pickupEndTime",
             b.status AS status,
@@ -238,6 +270,10 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             st.name AS "storeName",
             st.slug AS "storeSlug",
             st.address AS "storeAddress",
+            st.logo_url AS "storeLogoUrl",
+            st.cover_image_url AS "storeCoverImageUrl",
+            st.avg_rating AS "storeAvgRating",
+            st.total_ratings AS "storeTotalRatings",
             st.district AS district,
             st.city AS city,
             st.lat AS lat,
@@ -245,6 +281,7 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             b.name AS name,
             b.description AS description,
             b.bag_type AS "bagType",
+            b.diet_type AS "dietType",
             b.category AS category,
             b.bag_size AS "bagSize",
             array_to_string(b.photos, ',') AS photos,
@@ -255,6 +292,9 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             b.dynamic_pricing_enabled AS "dynamicPricingEnabled",
             b.platform_fee AS "platformFee",
             b.max_per_order AS "maxPerOrder",
+            b.container_provided AS "containerProvided",
+            b.carrier_bag_provided AS "carrierBagProvided",
+            b.packaging_note AS "packagingNote",
             b.pickup_start_time AS "pickupStartTime",
             b.pickup_end_time AS "pickupEndTime",
             b.status AS status,

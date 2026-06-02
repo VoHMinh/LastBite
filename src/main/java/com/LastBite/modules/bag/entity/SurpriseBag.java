@@ -4,6 +4,7 @@ import com.LastBite.common.entity.BaseEntity;
 import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.enums.BagStatus;
 import com.LastBite.modules.bag.enums.BagType;
+import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreCategory;
 import jakarta.persistence.*;
@@ -19,7 +20,8 @@ import java.time.LocalTime;
 @Table(name = "surprise_bags", indexes = {
         @Index(name = "idx_surprise_bags_store_id", columnList = "store_id"),
         @Index(name = "idx_surprise_bags_store_status", columnList = "store_id,status"),
-        @Index(name = "idx_surprise_bags_pickup_window", columnList = "pickup_start_time,pickup_end_time")
+        @Index(name = "idx_surprise_bags_pickup_window", columnList = "pickup_start_time,pickup_end_time"),
+        @Index(name = "idx_surprise_bags_diet_type_bag_type", columnList = "diet_type,bag_type")
 })
 @Getter
 @Setter
@@ -42,6 +44,11 @@ public class SurpriseBag extends BaseEntity {
     @Column(name = "bag_type", nullable = false, length = 30)
     @Builder.Default
     private BagType bagType = BagType.STANDARD;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "diet_type", nullable = false, length = 30)
+    @Builder.Default
+    private DietType dietType = DietType.MEAT;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -78,6 +85,17 @@ public class SurpriseBag extends BaseEntity {
     @Column(name = "max_per_order", nullable = false)
     @Builder.Default
     private int maxPerOrder = 1;
+
+    @Column(name = "container_provided", nullable = false)
+    @Builder.Default
+    private boolean containerProvided = true;
+
+    @Column(name = "carrier_bag_provided", nullable = false)
+    @Builder.Default
+    private boolean carrierBagProvided = true;
+
+    @Column(name = "packaging_note", length = 500)
+    private String packagingNote;
 
     @Column(name = "pickup_start_time", nullable = false)
     private LocalTime pickupStartTime;

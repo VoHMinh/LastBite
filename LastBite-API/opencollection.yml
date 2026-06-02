@@ -1,0 +1,13 @@
+opencollection: 1.0.0
+
+info:
+  name: LastBite-API
+  description: Runnable API collection for the LastBite Spring Boot backend.
+bundled: false
+extensions:
+  bruno:
+    ignore:
+      - node_modules
+      - .git
+      - .env
+      - .env.*

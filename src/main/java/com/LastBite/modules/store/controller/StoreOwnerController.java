@@ -4,7 +4,7 @@ import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.store.dto.request.ScheduleRequest;
 import com.LastBite.modules.store.dto.request.UpdateStoreRequest;
 import com.LastBite.modules.store.dto.response.StoreDetailResponse;
-import com.LastBite.modules.store.service.StoreService;
+import com.LastBite.modules.store.service.StoreServicePort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -32,7 +32,7 @@ import java.util.UUID;
 @Tag(name = "Chủ cửa hàng", description = "Quản lý cửa hàng (dành cho chủ cửa hàng đã đăng ký)")
 public class StoreOwnerController {
 
-    private final StoreService storeService;
+    private final StoreServicePort storeService;
 
     @GetMapping
     @Operation(summary = "Xem cửa hàng của tôi")

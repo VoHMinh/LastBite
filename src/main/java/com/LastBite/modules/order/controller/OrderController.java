@@ -3,7 +3,7 @@ package com.LastBite.modules.order.controller;
 import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.order.dto.request.CreateOrderRequest;
 import com.LastBite.modules.order.dto.response.OrderResponse;
-import com.LastBite.modules.order.service.OrderService;
+import com.LastBite.modules.order.service.OrderServicePort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,7 +23,7 @@ import java.util.UUID;
 @Tag(name = "Orders", description = "Đặt giữ túi và snapshot giá tại thời điểm đặt")
 public class OrderController {
 
-    private final OrderService orderService;
+    private final OrderServicePort orderService;
 
     @PostMapping
     @Operation(summary = "Đặt giữ túi hôm nay")

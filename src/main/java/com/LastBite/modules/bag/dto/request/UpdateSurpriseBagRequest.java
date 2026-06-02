@@ -2,6 +2,7 @@ package com.LastBite.modules.bag.dto.request;
 
 import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.enums.BagSize;
+import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.store.enums.StoreCategory;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
@@ -23,6 +24,8 @@ public class UpdateSurpriseBagRequest {
 
     private BagType bagType;
 
+    private DietType dietType;
+
     private StoreCategory category;
 
     private BagSize bagSize;
@@ -34,6 +37,13 @@ public class UpdateSurpriseBagRequest {
     @Min(value = 1, message = "Mỗi đơn phải cho mua ít nhất 1 túi")
     @Max(value = 3, message = "Mỗi khách tối đa 3 túi/ngày/cửa hàng")
     private Integer maxPerOrder;
+
+    private Boolean containerProvided;
+
+    private Boolean carrierBagProvided;
+
+    @Size(max = 500, message = "Ghi chu bao bi toi da 500 ky tu")
+    private String packagingNote;
 
     private LocalTime pickupStartTime;
 

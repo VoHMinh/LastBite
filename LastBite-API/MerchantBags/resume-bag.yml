@@ -1,0 +1,21 @@
+info:
+  name: Resume Bag
+  type: http
+  seq: 6
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/v1/merchant/bags/:bagId/resume"
+  params:
+    - name: bagId
+      value: "{{bagId}}"
+      type: path
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

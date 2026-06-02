@@ -1,0 +1,42 @@
+info:
+  name: Nearby Bags
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/v1/bags/nearby"
+  params:
+    - name: lat
+      value: "10.7769"
+      type: query
+      disabled: true
+    - name: lng
+      value: "106.7009"
+      type: query
+      disabled: true
+    - name: radius
+      value: "5"
+      type: query
+    - name: category
+      value: BAKERY
+      type: query
+      disabled: true
+    - name: district
+      value: District 1
+      type: query
+      disabled: true
+    - name: sort
+      value: pickup_time
+      type: query
+    - name: limit
+      value: "20"
+      type: query
+      disabled: true
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

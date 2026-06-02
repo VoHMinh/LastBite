@@ -6,8 +6,10 @@ import com.LastBite.modules.user.dto.request.AddressRequest;
 import com.LastBite.modules.user.dto.request.ChangePasswordRequest;
 import com.LastBite.modules.user.dto.request.UpdateProfileRequest;
 import com.LastBite.modules.user.dto.response.AddressResponse;
-import com.LastBite.modules.user.service.AddressService;
-import com.LastBite.modules.user.service.UserService;
+import com.LastBite.modules.user.service.AddressServicePort;
+import com.LastBite.modules.user.service.FavoriteStoreServicePort;
+import com.LastBite.modules.user.service.UserServicePort;
+import com.LastBite.modules.store.dto.response.StoreResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,8 +29,9 @@ import java.util.UUID;
 @Tag(name = "Hồ sơ người dùng", description = "Quản lý hồ sơ cá nhân và địa chỉ")
 public class UserController {
 
-    private final UserService userService;
-    private final AddressService addressService;
+    private final UserServicePort userService;
+    private final AddressServicePort addressService;
+    private final FavoriteStoreServicePort favoriteStoreService;
 
     // ── Profile ──
 
@@ -104,6 +107,35 @@ public class UserController {
             @PathVariable UUID addressId) {
         UUID userId = extractUserId(jwt);
         return ResponseEntity.ok(ApiResponse.ok(addressService.setDefault(userId, addressId)));
+    }
+
+    // â”€â”€ Favorite Stores â”€â”€
+
+    @GetMapping("/me/favorite-stores")
+    @Operation(summary = "Danh sÃ¡ch cá»­a hÃ ng yÃªu thÃ­ch")
+    public ResponseEntity<ApiResponse<List<StoreResponse>>> getFavoriteStores(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(favoriteStoreService.list(userId)));
+    }
+
+    @PostMapping("/me/favorite-stores/{storeId}")
+    @Operation(summary = "ThÃªm cá»­a hÃ ng vÃ o danh sÃ¡ch yÃªu thÃ­ch")
+    public ResponseEntity<ApiResponse<StoreResponse>> addFavoriteStore(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID storeId) {
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(favoriteStoreService.add(userId, storeId),
+                "ÄÃ£ thÃªm cá»­a hÃ ng yÃªu thÃ­ch"));
+    }
+
+    @DeleteMapping("/me/favorite-stores/{storeId}")
+    @Operation(summary = "XÃ³a cá»­a hÃ ng khá»i danh sÃ¡ch yÃªu thÃ­ch")
+    public ResponseEntity<ApiResponse<Void>> deleteFavoriteStore(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID storeId) {
+        UUID userId = extractUserId(jwt);
+        favoriteStoreService.delete(userId, storeId);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     private UUID extractUserId(Jwt jwt) {

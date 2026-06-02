@@ -1,0 +1,21 @@
+info:
+  name: Activate Price Tier
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/v1/admin/bag-price-tiers/:tierId/activate"
+  params:
+    - name: tierId
+      value: "{{tierId}}"
+      type: path
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

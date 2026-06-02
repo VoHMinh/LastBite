@@ -1,0 +1,33 @@
+info:
+  name: Update Store
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/v1/store-owner/store"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "LastBite Demo Bakery Updated",
+        "description": "Updated demo store",
+        "phone": "0900000004",
+        "email": "store-updated@example.com",
+        "address": "10 Updated Street",
+        "district": "District 1",
+        "city": "Ho Chi Minh",
+        "lat": 10.7769,
+        "lng": 106.7009,
+        "coverImageUrl": "https://example.com/cover-updated.jpg",
+        "logoUrl": "https://example.com/logo-updated.jpg"
+      }
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

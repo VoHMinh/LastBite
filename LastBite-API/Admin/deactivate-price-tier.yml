@@ -1,0 +1,21 @@
+info:
+  name: Deactivate Price Tier
+  type: http
+  seq: 6
+
+http:
+  method: PATCH
+  url: "{{baseUrl}}/api/v1/admin/bag-price-tiers/:tierId/deactivate"
+  params:
+    - name: tierId
+      value: "{{tierId}}"
+      type: path
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

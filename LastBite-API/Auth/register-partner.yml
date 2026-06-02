@@ -1,0 +1,44 @@
+info:
+  name: Register Partner
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/v1/auth/register-partner"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "owner@example.com",
+        "password": "Password@123",
+        "fullName": "Demo Store Owner",
+        "ownerPhone": "0900000002",
+        "storeName": "LastBite Demo Bakery",
+        "storeDescription": "Demo partner store",
+        "storeCategory": "BAKERY",
+        "storePhone": "0900000003",
+        "storeEmail": "store@example.com",
+        "storeAddress": "1 Demo Street",
+        "storeDistrict": "District 1",
+        "storeCity": "Ho Chi Minh",
+        "lat": 10.7769,
+        "lng": 106.7009,
+        "coverImageUrl": "https://example.com/cover.jpg",
+        "logoUrl": "https://example.com/logo.jpg",
+        "businessLicenseNumber": "BL-001",
+        "businessLicenseImageUrl": "https://example.com/license.jpg"
+      }
+  auth: none
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "201"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

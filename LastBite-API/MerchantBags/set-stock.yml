@@ -1,0 +1,31 @@
+info:
+  name: Set Stock
+  type: http
+  seq: 7
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/v1/merchant/bags/:bagId/stock/:stockDate"
+  params:
+    - name: bagId
+      value: "{{bagId}}"
+      type: path
+    - name: stockDate
+      value: "{{stockDate}}"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "quantity": 10,
+        "reason": "Initial daily stock"
+      }
+  auth:
+    type: bearer
+    token: "{{accessToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

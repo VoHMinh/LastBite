@@ -2,11 +2,11 @@ package com.LastBite.modules.store.controller;
 
 import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.bag.dto.response.PublicBagSummaryResponse;
-import com.LastBite.modules.bag.service.BagDiscoveryService;
+import com.LastBite.modules.bag.service.BagDiscoveryServicePort;
 import com.LastBite.modules.store.dto.response.PublicStoreDetailResponse;
 import com.LastBite.modules.store.dto.response.StoreResponse;
 import com.LastBite.modules.store.enums.StoreCategory;
-import com.LastBite.modules.store.service.StoreQueryService;
+import com.LastBite.modules.store.service.StoreQueryServicePort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +29,8 @@ import java.util.UUID;
 @Tag(name = "Cửa hàng (Công khai)", description = "Tra cứu cửa hàng công khai")
 public class StorePublicController {
 
-    private final StoreQueryService storeQueryService;
-    private final BagDiscoveryService bagDiscoveryService;
+    private final StoreQueryServicePort storeQueryService;
+    private final BagDiscoveryServicePort bagDiscoveryService;
 
     @GetMapping
     @Operation(summary = "Tìm kiếm cửa hàng đang hoạt động và đã xác minh")
