@@ -73,14 +73,23 @@ public class Store extends BaseEntity {
     @Column(name = "cover_image_url", length = 500)
     private String coverImageUrl;
 
+    @Column(name = "cover_image_key", length = 500)
+    private String coverImageKey;
+
     @Column(name = "logo_url", length = 500)
     private String logoUrl;
+
+    @Column(name = "logo_key", length = 500)
+    private String logoKey;
 
     @Column(name = "business_license_number", length = 100)
     private String businessLicenseNumber;
 
     @Column(name = "business_license_image_url", length = 500)
     private String businessLicenseImageUrl;
+
+    @Column(name = "business_license_image_key", length = 500)
+    private String businessLicenseImageKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
