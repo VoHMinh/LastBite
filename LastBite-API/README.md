@@ -12,7 +12,9 @@ Recommended flow:
 1. Start the backend locally.
 2. Open this folder in Bruno.
 3. Select the `local` environment.
-4. Run `Auth/Login` and let the after-response script save `accessToken`.
+4. Run `Auth/Login`; the script saves `accessToken`, while the backend sets the HttpOnly `refresh_token` cookie.
 5. Replace sample IDs in `environments/local.yml` after creating real stores, bags, addresses, orders, or tiers.
 
 If the API contract changes, use Swagger/OpenAPI as the source of truth, then update or re-import requests into Bruno.
+
+Auth note: refresh tokens are cookie-only. Do not paste them into request bodies; use a client/cookie jar that sends the `refresh_token` cookie back to `/api/v1/auth/refresh`.

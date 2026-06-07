@@ -304,8 +304,8 @@ public class AuthService implements AuthServicePort {
      * Đăng xuất — thu hồi refresh token cụ thể.
      */
     @Transactional
-    public void logout(String rawRefreshToken) {
-        refreshTokenService.revokeToken(rawRefreshToken);
+    public void logout(UUID userId, UUID sessionId) {
+        refreshTokenService.revokeSession(userId, sessionId);
     }
 
     /**
@@ -366,12 +366,12 @@ public class AuthService implements AuthServicePort {
     }
 
     private AuthResponse buildAuthResponse(User user) {
-        String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = refreshTokenService.createRefreshToken(user);
+        RefreshTokenService.IssuedRefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+        String accessToken = jwtService.generateAccessToken(user, refreshToken.sessionId());
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(refreshToken)
+                .refreshToken(refreshToken.rawToken())
                 .expiresIn(jwtService.getAccessTokenDuration())
                 .build();
     }

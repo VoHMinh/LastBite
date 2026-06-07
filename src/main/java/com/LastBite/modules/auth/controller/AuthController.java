@@ -5,7 +5,6 @@ import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.auth.dto.request.GoogleAuthRequest;
 import com.LastBite.modules.auth.dto.request.LoginRequest;
-import com.LastBite.modules.auth.dto.request.RefreshTokenRequest;
 import com.LastBite.modules.auth.dto.request.RegisterPartnerRequest;
 import com.LastBite.modules.auth.dto.request.RegisterRequest;
 import com.LastBite.modules.auth.dto.request.ResendOtpRequest;
@@ -113,28 +112,24 @@ public class AuthController {
     @PostMapping("/refresh")
     @Operation(summary = "Làm mới access token bằng refresh cookie httpOnly")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(
-            @CookieValue(value = REFRESH_COOKIE_NAME, required = false) String cookieRefreshToken,
-            @RequestBody(required = false) RefreshTokenRequest request) {
-        return authResponse(authService.refresh(resolveRefreshToken(cookieRefreshToken, request)),
+            @CookieValue(value = REFRESH_COOKIE_NAME, required = false) String cookieRefreshToken) {
+        return authResponse(authService.refresh(resolveRefreshToken(cookieRefreshToken)),
                 "Làm mới token thành công");
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Đăng xuất và thu hồi refresh token hiện tại")
-    public ResponseEntity<ApiResponse<Void>> logout(
-            @CookieValue(value = REFRESH_COOKIE_NAME, required = false) String cookieRefreshToken,
-            @RequestBody(required = false) RefreshTokenRequest request) {
-        authService.logout(resolveRefreshToken(cookieRefreshToken, request));
+    @Operation(summary = "Đăng xuất phiên hiện tại")
+    public ResponseEntity<ApiResponse<Void>> logout(@AuthenticationPrincipal Jwt jwt) {
+        authService.logout(extractUserId(jwt), extractSessionId(jwt));
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
                 .body(ApiResponse.ok());
     }
 
     @PostMapping("/logout-all")
-    @Operation(summary = "Đăng xuất khỏi tất cả thiết bị")
+    @Operation(summary = "Đăng xuất khỏi tất cả thiết bị của người dùng hiện tại")
     public ResponseEntity<ApiResponse<Void>> logoutAll(@AuthenticationPrincipal Jwt jwt) {
-        UUID userId = UUID.fromString(jwt.getClaimAsString("user_id"));
-        authService.logoutAll(userId);
+        authService.logoutAll(extractUserId(jwt));
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
                 .body(ApiResponse.ok());
@@ -143,8 +138,7 @@ public class AuthController {
     @GetMapping("/me")
     @Operation(summary = "Lấy thông tin người dùng hiện tại")
     public ResponseEntity<ApiResponse<UserResponse>> me(@AuthenticationPrincipal Jwt jwt) {
-        UUID userId = UUID.fromString(jwt.getClaimAsString("user_id"));
-        return ResponseEntity.ok(ApiResponse.ok(authService.getCurrentUser(userId)));
+        return ResponseEntity.ok(ApiResponse.ok(authService.getCurrentUser(extractUserId(jwt))));
     }
 
     private ResponseEntity<ApiResponse<AuthResponse>> authResponse(AuthResponse auth, String message) {
@@ -153,14 +147,19 @@ public class AuthController {
                 .body(ApiResponse.ok(auth.withoutRefreshToken(), message));
     }
 
-    private String resolveRefreshToken(String cookieRefreshToken, RefreshTokenRequest request) {
+    private String resolveRefreshToken(String cookieRefreshToken) {
         if (cookieRefreshToken != null && !cookieRefreshToken.isBlank()) {
             return cookieRefreshToken;
         }
-        if (request != null && request.getRefreshToken() != null && !request.getRefreshToken().isBlank()) {
-            return request.getRefreshToken();
-        }
         throw new ApiException(ErrorCode.TOKEN_INVALID, "Thiếu refresh token");
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return UUID.fromString(jwt.getClaimAsString("user_id"));
+    }
+
+    private UUID extractSessionId(Jwt jwt) {
+        return UUID.fromString(jwt.getClaimAsString("sid"));
     }
 
     private ResponseCookie refreshCookie(String refreshToken) {
