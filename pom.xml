@@ -122,6 +122,11 @@
 			<artifactId>s3</artifactId>
 			<version>${aws.sdk.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.google.firebase</groupId>
+			<artifactId>firebase-admin</artifactId>
+			<version>9.4.0</version>
+		</dependency>
 
 		<!--  Test                                     -->
 		<!-- ══════════════════════════════════════════ -->

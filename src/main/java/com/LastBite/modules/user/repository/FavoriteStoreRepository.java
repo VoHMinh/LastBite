@@ -16,6 +16,9 @@ public interface FavoriteStoreRepository extends JpaRepository<FavoriteStore, UU
     @EntityGraph(attributePaths = {"store"})
     Optional<FavoriteStore> findByUserIdAndStoreId(UUID userId, UUID storeId);
 
+    @EntityGraph(attributePaths = {"user", "store"})
+    List<FavoriteStore> findByStoreId(UUID storeId);
+
     boolean existsByUserIdAndStoreId(UUID userId, UUID storeId);
 
     long deleteByUserIdAndStoreId(UUID userId, UUID storeId);

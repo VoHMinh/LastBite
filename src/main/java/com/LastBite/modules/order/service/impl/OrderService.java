@@ -13,6 +13,7 @@ import com.LastBite.modules.bag.enums.StockAuditAction;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.order.dto.request.CreateOrderRequest;
 import com.LastBite.modules.order.dto.response.OrderResponse;
 import com.LastBite.modules.order.entity.Order;
@@ -45,6 +46,7 @@ public class OrderService implements OrderServicePort {
     private final StockAuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
     private final BagPricingService pricingService;
+    private final NotificationServicePort notificationService;
     private final Clock clock;
 
     @Transactional
@@ -99,6 +101,7 @@ public class OrderService implements OrderServicePort {
         order = orderRepository.save(order);
         stockRepository.save(stock);
         writeReserveAudit(bag, stock, user, order.getId(), request.getQuantity(), availableBefore, stock.available());
+        notificationService.notifyOrderReserved(order);
 
         return toResponse(order);
     }

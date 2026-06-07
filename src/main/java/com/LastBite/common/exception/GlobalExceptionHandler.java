@@ -117,7 +117,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ErrorCode ec = ErrorCode.UNEXPECTED_ERROR;
         return ResponseEntity.status(ec.getStatus())
                 .body(error(ec.getCode(), ec.getDefaultMessage(), request.getRequestURI(), null));
-    }
+        }
 
     // ── Spring internal exceptions (405, 415, etc.) ───────────────────
     @Override
