@@ -83,9 +83,9 @@ public class AuthService implements AuthServicePort {
                 .build();
 
         user = userRepository.save(user);
-        log.info("Người dùng mới đã đăng ký: {} ({}) — đang chờ xác minh bằng link email", user.getEmail(), user.getId());
+        log.info("Người dùng mới đã đăng ký: {} ({}) — đang chờ xác minh bằng OTP", user.getEmail(), user.getId());
 
-        sendVerificationLink(user);
+        sendOtp(user);
     }
 
     /**
@@ -137,10 +137,10 @@ public class AuthService implements AuthServicePort {
 
         storeService.createStoreInternal(user, storeReq);
 
-        log.info("Đối tác mới đã đăng ký: {} ({}) với cửa hàng: {} — đang chờ xác minh bằng link email",
+        log.info("Đối tác mới đã đăng ký: {} ({}) với cửa hàng: {} — đang chờ xác minh bằng OTP",
                 user.getEmail(), user.getId(), request.getStoreName());
 
-        sendVerificationLink(user);
+        sendOtp(user);
     }
 
     /**
