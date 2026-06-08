@@ -16,6 +16,7 @@ import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
 import com.LastBite.modules.bag.service.impl.SurpriseBagService;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.enums.StoreStatus;
@@ -49,6 +50,7 @@ class SurpriseBagServiceTest {
     private final StockAuditLogRepository auditLogRepository = mock(StockAuditLogRepository.class);
     private final StoreRepository storeRepository = mock(StoreRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
+    private final NotificationServicePort notificationService = mock(NotificationServicePort.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T00:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagPricingService pricingService = new BagPricingService(clock);
 
@@ -58,7 +60,7 @@ class SurpriseBagServiceTest {
     @BeforeEach
     void setUp() {
         service = new SurpriseBagService(bagRepository, stockRepository, priceTierRepository,
-                auditLogRepository, storeRepository, userRepository, pricingService, clock);
+                auditLogRepository, storeRepository, userRepository, pricingService, notificationService, clock);
         ownerId = UUID.randomUUID();
 
         Store store = Store.builder()

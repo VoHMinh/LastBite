@@ -58,7 +58,7 @@ public class JwtService implements JwtServicePort {
     /**
      * Tạo JWT access token đã ký.
      */
-    public String generateAccessToken(User user) {
+    public String generateAccessToken(User user, UUID sessionId) {
         try {
             Instant now = Instant.now();
             Instant exp = now.plusSeconds(accessTokenDuration);
@@ -66,6 +66,7 @@ public class JwtService implements JwtServicePort {
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
                     .subject(user.getEmail())
                     .claim("user_id", user.getId().toString())
+                    .claim("sid", sessionId.toString())
                     .claim("roles", List.of(user.getRole().name()))
                     .jwtID(UUID.randomUUID().toString())
                     .issuer("lastbite")

@@ -4,8 +4,6 @@ variables:
     value: http://localhost:8080
   - name: accessToken
     value: ""
-  - name: refreshToken
-    value: ""
   - name: bagId
     value: 00000000-0000-0000-0000-000000000000
   - name: storeId

@@ -28,7 +28,7 @@ public interface AuthServicePort {
 
     AuthResponse refresh(String rawRefreshToken);
 
-    void logout(String rawRefreshToken);
+    void logout(UUID userId, UUID sessionId);
 
     void logoutAll(UUID userId);
 
