@@ -143,12 +143,12 @@ public class GoogleAuthService implements GoogleAuthServicePort {
     }
 
     private AuthResponse buildAuthResponse(User user) {
-        String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = refreshTokenService.createRefreshToken(user);
+        RefreshTokenService.IssuedRefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+        String accessToken = jwtService.generateAccessToken(user, refreshToken.sessionId());
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(refreshToken)
+                .refreshToken(refreshToken.rawToken())
                 .expiresIn(jwtService.getAccessTokenDuration())
                 .build();
     }

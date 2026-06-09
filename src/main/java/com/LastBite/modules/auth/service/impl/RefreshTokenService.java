@@ -32,7 +32,7 @@ public class RefreshTokenService {
     private final JwtServicePort jwtService;
 
     @Transactional
-    public String createRefreshToken(User user) {
+    public IssuedRefreshToken createRefreshToken(User user) {
         String rawToken = jwtService.generateRefreshToken();
         String tokenHash = jwtService.hashToken(rawToken);
 
@@ -44,13 +44,13 @@ public class RefreshTokenService {
                 .expiresAt(expiresAt)
                 .revoked(false)
                 .build();
-        refreshTokenRepository.save(entity);
+        entity = refreshTokenRepository.save(entity);
 
         Duration ttl = Duration.between(Instant.now(), expiresAt);
         cacheToken(tokenHash, user.getId(), ttl);
 
         log.debug("Đã tạo refresh token cho người dùng {}", user.getEmail());
-        return rawToken;
+        return new IssuedRefreshToken(entity.getId(), rawToken);
     }
 
     /**
@@ -89,6 +89,17 @@ public class RefreshTokenService {
     }
 
     @Transactional
+    public void revokeSession(UUID userId, UUID sessionId) {
+        refreshTokenRepository.findByIdAndUser_IdAndRevokedFalse(sessionId, userId)
+                .ifPresent(token -> {
+                    token.setRevoked(true);
+                    refreshTokenRepository.save(token);
+                    redisTemplate.delete(REDIS_PREFIX + token.getTokenHash());
+                    redisTemplate.opsForSet().remove(REDIS_USER_PREFIX + userId, token.getTokenHash());
+                });
+    }
+
+    @Transactional
     public void revokeAllByUserId(UUID userId) {
         int count = refreshTokenRepository.revokeAllByUserId(userId);
         deleteCachedTokensForUser(userId);
@@ -123,5 +134,8 @@ public class RefreshTokenService {
                     .toList());
         }
         redisTemplate.delete(userKey);
+    }
+
+    public record IssuedRefreshToken(UUID sessionId, String rawToken) {
     }
 }

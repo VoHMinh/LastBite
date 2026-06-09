@@ -25,6 +25,7 @@ import com.LastBite.modules.bag.repository.BagPriceTierRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.bag.service.SurpriseBagServicePort;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
@@ -61,6 +62,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
     private final BagPricingService pricingService;
+    private final NotificationServicePort notificationService;
     private final Clock clock;
 
     @Transactional
@@ -188,6 +190,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                         .status(DailyStockStatus.ACTIVE)
                         .build());
 
+        int availableBefore = stock.available();
         int before = stock.getQuantity();
         if (request.getQuantity() < stock.getReserved() + stock.getSold()) {
             throw new ApiException(ErrorCode.INVALID_INPUT,
@@ -200,6 +203,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
 
         writeAudit(bag, stock, actor, StockAuditAction.STOCK_SET,
                 stock.getQuantity() - before, before, stock.getQuantity(), request.getReason());
+        notifyFavoriteStoreIfNewAvailability(date, stock, availableBefore);
 
         return toStockResponse(stock);
     }
@@ -225,6 +229,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                         .status(DailyStockStatus.ACTIVE)
                         .build());
 
+        int availableBefore = stock.available();
         int before = stock.getQuantity();
         int target = before + request.getDelta();
         if (target < stock.getReserved() + stock.getSold()) {
@@ -240,6 +245,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         writeAudit(bag, stock, actor,
                 request.getDelta() > 0 ? StockAuditAction.STOCK_ADD : StockAuditAction.STOCK_REDUCE,
                 request.getDelta(), before, target, request.getReason());
+        notifyFavoriteStoreIfNewAvailability(today, stock, availableBefore);
 
         return toStockResponse(stock);
     }
@@ -401,6 +407,15 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                 .quantityAfter(after)
                 .reason(trimToNull(reason))
                 .build());
+    }
+
+    private void notifyFavoriteStoreIfNewAvailability(LocalDate date, BagDailyStock stock, int availableBefore) {
+        if (!date.equals(LocalDate.now(clock))) {
+            return;
+        }
+        if (availableBefore <= 0 && stock.available() > 0) {
+            notificationService.notifyFavoriteStoreStockAvailable(stock);
+        }
     }
 
     private SurpriseBagResponse toBagResponse(SurpriseBag bag, BagDailyStock todayStock) {

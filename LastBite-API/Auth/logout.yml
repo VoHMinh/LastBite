@@ -6,12 +6,6 @@ info:
 http:
   method: POST
   url: "{{baseUrl}}/api/v1/auth/logout"
-  body:
-    type: json
-    data: |-
-      {
-        "refreshToken": "{{refreshToken}}"
-      }
   auth:
     type: bearer
     token: "{{accessToken}}"

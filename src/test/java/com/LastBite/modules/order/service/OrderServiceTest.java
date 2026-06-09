@@ -12,6 +12,7 @@ import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.order.dto.request.CreateOrderRequest;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.repository.OrderRepository;
@@ -43,6 +44,7 @@ class OrderServiceTest {
     private final BagDailyStockRepository stockRepository = mock(BagDailyStockRepository.class);
     private final StockAuditLogRepository auditLogRepository = mock(StockAuditLogRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
+    private final NotificationServicePort notificationService = mock(NotificationServicePort.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T13:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagPricingService pricingService = new BagPricingService(clock);
 
@@ -55,7 +57,7 @@ class OrderServiceTest {
     @BeforeEach
     void setUp() {
         service = new OrderService(orderRepository, stockRepository, auditLogRepository,
-                userRepository, pricingService, clock);
+                userRepository, pricingService, notificationService, clock);
         userId = UUID.randomUUID();
         bagId = UUID.randomUUID();
         user = User.builder().email("customer@test.com").fullName("Customer Test").build();
