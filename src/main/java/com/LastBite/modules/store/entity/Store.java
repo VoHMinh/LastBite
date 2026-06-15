@@ -2,6 +2,7 @@ package com.LastBite.modules.store.entity;
 
 import com.LastBite.common.entity.BaseEntity;
 import com.LastBite.modules.auth.entity.User;
+import com.LastBite.modules.merchant.entity.MerchantBusinessProfile;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
@@ -20,7 +21,8 @@ import java.util.List;
 @Entity
 @Table(name = "stores", indexes = {
         @Index(name = "idx_stores_slug", columnList = "slug"),
-        @Index(name = "idx_stores_owner_id", columnList = "owner_id"),
+        @Index(name = "idx_stores_created_by_user_id", columnList = "created_by_user_id"),
+        @Index(name = "idx_stores_business_profile_id", columnList = "business_profile_id"),
         @Index(name = "idx_stores_status", columnList = "status"),
         @Index(name = "idx_stores_category", columnList = "category"),
         @Index(name = "idx_stores_verification", columnList = "verification_status")
@@ -34,9 +36,13 @@ import java.util.List;
 @AllArgsConstructor
 public class Store extends BaseEntity {
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false, unique = true)
-    private User owner;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id", nullable = false)
+    private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_profile_id", nullable = false)
+    private MerchantBusinessProfile businessProfile;
 
     @Column(nullable = false, length = 255)
     private String name;
@@ -70,6 +76,21 @@ public class Store extends BaseEntity {
     private Double lat;
     private Double lng;
 
+    @Column(name = "pickup_instructions", columnDefinition = "TEXT")
+    private String pickupInstructions;
+
+    @Column(name = "storefront_image_url", length = 500)
+    private String storefrontImageUrl;
+
+    @Column(name = "storefront_image_key", length = 500)
+    private String storefrontImageKey;
+
+    @Column(name = "menu_image_url", length = 500)
+    private String menuImageUrl;
+
+    @Column(name = "menu_image_key", length = 500)
+    private String menuImageKey;
+
     @Column(name = "cover_image_url", length = 500)
     private String coverImageUrl;
 
@@ -94,12 +115,12 @@ public class Store extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default
-    private StoreStatus status = StoreStatus.ACTIVE;
+    private StoreStatus status = StoreStatus.DRAFT;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", nullable = false, length = 30)
     @Builder.Default
-    private VerificationStatus verificationStatus = VerificationStatus.PENDING;
+    private VerificationStatus verificationStatus = VerificationStatus.DRAFT;
 
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;

@@ -17,6 +17,7 @@ import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
 import com.LastBite.modules.bag.service.impl.SurpriseBagService;
 import com.LastBite.modules.notification.service.NotificationServicePort;
+import com.LastBite.modules.merchant.service.StoreAccessService;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.enums.StoreStatus;
@@ -51,6 +52,7 @@ class SurpriseBagServiceTest {
     private final StoreRepository storeRepository = mock(StoreRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final NotificationServicePort notificationService = mock(NotificationServicePort.class);
+    private final StoreAccessService storeAccessService = mock(StoreAccessService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T00:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagPricingService pricingService = new BagPricingService(clock);
 
@@ -60,7 +62,8 @@ class SurpriseBagServiceTest {
     @BeforeEach
     void setUp() {
         service = new SurpriseBagService(bagRepository, stockRepository, priceTierRepository,
-                auditLogRepository, storeRepository, userRepository, pricingService, notificationService, clock);
+                auditLogRepository, storeRepository, userRepository, pricingService, notificationService,
+                storeAccessService, clock);
         ownerId = UUID.randomUUID();
 
         Store store = Store.builder()
@@ -72,7 +75,8 @@ class SurpriseBagServiceTest {
                 .verificationStatus(VerificationStatus.VERIFIED)
                 .build();
         ReflectionTestUtils.setField(store, "id", UUID.randomUUID());
-        when(storeRepository.findByOwnerId(ownerId)).thenReturn(Optional.of(store));
+        when(storeRepository.findFirstByBusinessProfileOwnerIdOrderByCreatedAtAsc(ownerId))
+                .thenReturn(Optional.of(store));
         when(priceTierRepository.findByCategoryAndBagSizeAndActiveTrue(StoreCategory.BAKERY, BagSize.STANDARD))
                 .thenReturn(Optional.of(priceTier(StoreCategory.BAKERY, BagSize.STANDARD)));
         when(bagRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -166,7 +170,8 @@ class SurpriseBagServiceTest {
     void updateChangesDietTypeWhenProvided() {
         UUID bagId = UUID.randomUUID();
         SurpriseBag bag = existingBag(bagId);
-        when(bagRepository.findByIdAndStoreOwnerId(bagId, ownerId)).thenReturn(Optional.of(bag));
+        when(bagRepository.findByIdAndStoreBusinessProfileOwnerId(bagId, ownerId))
+                .thenReturn(Optional.of(bag));
 
         var request = new com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest();
         request.setDietType(DietType.VEGETARIAN);

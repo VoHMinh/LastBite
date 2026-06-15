@@ -97,14 +97,17 @@ public class UserService implements UserServicePort {
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .username(user.getUsername())
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
-                .role(user.getRole())
+                .accountType(user.getAccountType())
+                .roles(user.getRoles().stream().map(role -> role.getCode().name()).sorted().toList())
                 .status(user.getStatus())
                 .authProvider(user.getAuthProvider())
                 .emailVerified(user.isEmailVerified())
                 .phoneVerified(user.isPhoneVerified())
+                .mustChangePassword(user.isMustChangePassword())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

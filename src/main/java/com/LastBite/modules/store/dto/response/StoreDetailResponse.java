@@ -24,6 +24,7 @@ import java.util.UUID;
 public class StoreDetailResponse implements Serializable {
     private UUID id;
     private UUID ownerId;
+    private UUID businessProfileId;
     private String name;
     private String slug;
     private String description;
@@ -35,8 +36,12 @@ public class StoreDetailResponse implements Serializable {
     private String city;
     private Double lat;
     private Double lng;
+    private String pickupInstructions;
+    private String storefrontImageUrl;
+    private String menuImageUrl;
     private String coverImageUrl;
     private String logoUrl;
+    private List<String> galleryImageUrls;
     private String businessLicenseNumber;
     private String businessLicenseImageUrl;
     private StoreStatus status;

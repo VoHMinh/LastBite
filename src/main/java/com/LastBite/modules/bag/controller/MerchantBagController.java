@@ -30,7 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/merchant/bags")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('STORE_OWNER')")
+@PreAuthorize("hasRole('MERCHANT_OWNER')")
 @Tag(name = "Merchant Bags", description = "Quản lý túi bất ngờ và tồn kho theo ngày")
 public class MerchantBagController {
 

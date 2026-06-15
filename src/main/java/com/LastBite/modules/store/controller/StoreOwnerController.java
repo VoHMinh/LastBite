@@ -1,6 +1,7 @@
 package com.LastBite.modules.store.controller;
 
 import com.LastBite.common.response.ApiResponse;
+import com.LastBite.modules.store.dto.request.CreateStoreRequest;
 import com.LastBite.modules.store.dto.request.ScheduleRequest;
 import com.LastBite.modules.store.dto.request.UpdateStoreRequest;
 import com.LastBite.modules.store.dto.response.StoreDetailResponse;
@@ -28,11 +29,20 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/store-owner/store")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('STORE_OWNER')")
+@PreAuthorize("hasRole('MERCHANT_OWNER')")
 @Tag(name = "Chủ cửa hàng", description = "Quản lý cửa hàng (dành cho chủ cửa hàng đã đăng ký)")
 public class StoreOwnerController {
 
     private final StoreServicePort storeService;
+
+    @PostMapping
+    @Operation(summary = "Tạo hồ sơ cửa hàng sau khi đăng ký merchant")
+    public ResponseEntity<ApiResponse<StoreDetailResponse>> createStore(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody CreateStoreRequest request) {
+        UUID ownerId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(storeService.createStore(ownerId, request), "Đã tạo cửa hàng"));
+    }
 
     @GetMapping
     @Operation(summary = "Xem cửa hàng của tôi")
@@ -71,6 +81,13 @@ public class StoreOwnerController {
     public ResponseEntity<ApiResponse<StoreDetailResponse>> activateStore(@AuthenticationPrincipal Jwt jwt) {
         UUID ownerId = extractUserId(jwt);
         return ResponseEntity.ok(ApiResponse.ok(storeService.activateStore(ownerId), "Cửa hàng đã hoạt động lại"));
+    }
+
+    @PostMapping("/submit-review")
+    @Operation(summary = "Gửi hồ sơ cửa hàng cho admin duyệt")
+    public ResponseEntity<ApiResponse<StoreDetailResponse>> submitReview(@AuthenticationPrincipal Jwt jwt) {
+        UUID ownerId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(storeService.submitReview(ownerId), "Đã gửi hồ sơ chờ duyệt"));
     }
 
     private UUID extractUserId(Jwt jwt) {

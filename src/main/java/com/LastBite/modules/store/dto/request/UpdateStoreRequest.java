@@ -2,6 +2,7 @@ package com.LastBite.modules.store.dto.request;
 
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import com.LastBite.modules.store.enums.StoreCategory;
 
 @Data
 public class UpdateStoreRequest {
@@ -10,6 +11,8 @@ public class UpdateStoreRequest {
     private String name;
 
     private String description;
+
+    private StoreCategory category;
 
     @Size(max = 20)
     private String phone;
@@ -28,9 +31,17 @@ public class UpdateStoreRequest {
     private Double lat;
     private Double lng;
 
+    private String pickupInstructions;
+
     @Size(max = 500)
     private String coverImageUrl;
 
     @Size(max = 500)
     private String logoUrl;
+
+    @Size(max = 100)
+    private String businessLicenseNumber;
+
+    @Size(max = 500)
+    private String businessLicenseImageUrl;
 }
