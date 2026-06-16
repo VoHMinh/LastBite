@@ -8,7 +8,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,7 +18,13 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
 
     /** Tìm theo chủ cửa hàng — kèm lịch mở cửa để tránh N+1. */
     @EntityGraph(value = "Store.withSchedules")
-    Optional<Store> findByOwnerId(UUID ownerId);
+    Optional<Store> findFirstByBusinessProfileOwnerIdOrderByCreatedAtAsc(UUID ownerId);
+
+    @EntityGraph(value = "Store.withSchedules")
+    List<Store> findAllByBusinessProfileOwnerIdOrderByCreatedAtAsc(UUID ownerId);
+
+    @EntityGraph(value = "Store.withSchedules")
+    Optional<Store> findByIdAndBusinessProfileOwnerId(UUID id, UUID ownerId);
 
     /** Tìm theo slug — kèm lịch mở cửa để tránh N+1. */
     @EntityGraph(value = "Store.withSchedules")
@@ -24,7 +32,16 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
 
     boolean existsBySlug(String slug);
 
-    boolean existsByOwnerId(UUID ownerId);
+    boolean existsByBusinessProfileOwnerId(UUID ownerId);
+
+    boolean existsByIdAndBusinessProfileOwnerId(UUID id, UUID ownerId);
+
+    @EntityGraph(value = "Store.withSchedules")
+    @Query("SELECT s FROM Store s WHERE s.id = :id")
+    Optional<Store> findDetailById(@Param("id") UUID id);
+
+    @EntityGraph(value = "Store.withSchedules")
+    Page<Store> findAllByVerificationStatus(VerificationStatus verificationStatus, Pageable pageable);
 
     /** Tìm cửa hàng: chỉ VERIFIED + ACTIVE, có bộ lọc tùy chọn. */
     @Query("""

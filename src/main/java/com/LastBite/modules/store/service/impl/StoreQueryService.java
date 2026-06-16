@@ -2,6 +2,10 @@ package com.LastBite.modules.store.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
+import com.LastBite.modules.media.enums.MediaPurpose;
+import com.LastBite.modules.media.enums.MediaTargetType;
+import com.LastBite.modules.media.enums.MediaUploadStatus;
+import com.LastBite.modules.media.repository.MediaUploadRepository;
 import com.LastBite.modules.store.dto.response.PublicStoreDetailResponse;
 import com.LastBite.modules.store.dto.response.StoreResponse;
 import com.LastBite.modules.store.entity.Store;
@@ -16,6 +20,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.UUID;
+
 /**
  * Truy vấn cửa hàng công khai cho khách hàng — chỉ đọc, có cache.
  */
@@ -25,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class StoreQueryService implements StoreQueryServicePort {
 
     private final StoreRepository storeRepository;
+    private final MediaUploadRepository mediaUploadRepository;
 
     /**
      * Tìm cửa hàng đã xác minh với bộ lọc tùy chọn (cache 5 phút).
@@ -80,6 +88,7 @@ public class StoreQueryService implements StoreQueryServicePort {
                 .lng(store.getLng())
                 .coverImageUrl(store.getCoverImageUrl())
                 .logoUrl(store.getLogoUrl())
+                .galleryImageUrls(galleryImageUrls(store.getId()))
                 .status(store.getStatus())
                 .avgRating(store.getAvgRating())
                 .totalRatings(store.getTotalRatings())
@@ -102,6 +111,7 @@ public class StoreQueryService implements StoreQueryServicePort {
                 .lng(store.getLng())
                 .coverImageUrl(store.getCoverImageUrl())
                 .logoUrl(store.getLogoUrl())
+                .galleryImageUrls(galleryImageUrls(store.getId()))
                 .status(store.getStatus())
                 .verificationStatus(store.getVerificationStatus())
                 .avgRating(store.getAvgRating())
@@ -112,5 +122,17 @@ public class StoreQueryService implements StoreQueryServicePort {
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private List<String> galleryImageUrls(UUID storeId) {
+        return mediaUploadRepository
+                .findAllByTargetTypeAndTargetIdAndPurposeAndStatusOrderByCreatedAtAsc(
+                        MediaTargetType.STORE,
+                        storeId,
+                        MediaPurpose.STORE_GALLERY,
+                        MediaUploadStatus.CONFIRMED)
+                .stream()
+                .map(upload -> upload.getPublicUrl())
+                .toList();
     }
 }

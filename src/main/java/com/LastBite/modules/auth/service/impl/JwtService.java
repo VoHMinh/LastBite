@@ -59,20 +59,34 @@ public class JwtService implements JwtServicePort {
      * Tạo JWT access token đã ký.
      */
     public String generateAccessToken(User user, UUID sessionId) {
+        List<String> roles = user.getRoles().stream()
+                .map(role -> role.getCode().name())
+                .sorted()
+                .toList();
+        return generateAccessToken(user, sessionId, roles, null);
+    }
+
+    @Override
+    public String generateAccessToken(User user, UUID sessionId, List<String> roles, UUID storeId) {
         try {
             Instant now = Instant.now();
             Instant exp = now.plusSeconds(accessTokenDuration);
 
-            JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                    .subject(user.getEmail())
+            JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
+                    .subject(user.getEmail() != null ? user.getEmail() : user.getUsername())
                     .claim("user_id", user.getId().toString())
                     .claim("sid", sessionId.toString())
-                    .claim("roles", List.of(user.getRole().name()))
+                    .claim("roles", roles)
+                    .claim("account_type", user.getAccountType().name())
+                    .claim("must_change_password", user.isMustChangePassword())
                     .jwtID(UUID.randomUUID().toString())
                     .issuer("lastbite")
                     .issueTime(Date.from(now))
-                    .expirationTime(Date.from(exp))
-                    .build();
+                    .expirationTime(Date.from(exp));
+            if (storeId != null) {
+                builder.claim("store_id", storeId.toString());
+            }
+            JWTClaimsSet claims = builder.build();
 
             SignedJWT signedJWT = new SignedJWT(
                     new JWSHeader(JWSAlgorithm.HS512), claims);

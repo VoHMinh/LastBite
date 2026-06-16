@@ -185,7 +185,7 @@ public class NotificationService implements NotificationServicePort {
     @Transactional
     public BroadcastNotificationResponse broadcastToCustomers(BroadcastNotificationRequest request) {
         List<User> customers = userRepository.findAll().stream()
-                .filter(user -> user.getRole() == UserRole.CUSTOMER)
+                .filter(user -> user.hasRole(UserRole.CUSTOMER))
                 .filter(user -> user.getStatus() == UserStatus.ACTIVE)
                 .toList();
 

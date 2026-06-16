@@ -5,6 +5,7 @@ import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.modules.auth.dto.response.AuthResponse;
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.enums.AuthProvider;
+import com.LastBite.modules.auth.enums.AccountType;
 import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.enums.UserStatus;
 import com.LastBite.modules.auth.repository.UserRepository;
@@ -43,6 +44,7 @@ public class GoogleAuthService implements GoogleAuthServicePort {
     private final UserRepository userRepository;
     private final JwtServicePort jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final RoleAssignmentService roleAssignmentService;
 
     @Value("${app.google.client-id:}")
     private String googleClientId;
@@ -130,12 +132,13 @@ public class GoogleAuthService implements GoogleAuthServicePort {
                 .email(email.toLowerCase().trim())
                 .fullName(fullName != null ? fullName : email.split("@")[0])
                 .avatarUrl(avatarUrl)
-                .role(UserRole.CUSTOMER)
+                .accountType(AccountType.PLATFORM)
                 .status(UserStatus.ACTIVE)
                 .authProvider(AuthProvider.GOOGLE)
                 .emailVerified(true)   // Google đã xác minh
                 .phoneVerified(false)
                 .build();
+        roleAssignmentService.addPlatformRole(user, UserRole.CUSTOMER);
 
         user = userRepository.save(user);
         log.info("Đã tạo người dùng Google mới: {} ({})", user.getEmail(), user.getId());

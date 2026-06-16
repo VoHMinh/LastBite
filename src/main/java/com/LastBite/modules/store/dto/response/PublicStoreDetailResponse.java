@@ -36,6 +36,7 @@ public class PublicStoreDetailResponse implements Serializable {
     private Double lng;
     private String coverImageUrl;
     private String logoUrl;
+    private List<String> galleryImageUrls;
     private StoreStatus status;
     private double avgRating;
     private int totalRatings;

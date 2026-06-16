@@ -5,6 +5,8 @@ import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.auth.dto.request.GoogleAuthRequest;
 import com.LastBite.modules.auth.dto.request.LoginRequest;
+import com.LastBite.modules.auth.dto.request.StoreLoginRequest;
+import com.LastBite.modules.auth.dto.request.InitialPasswordChangeRequest;
 import com.LastBite.modules.auth.dto.request.RegisterPartnerRequest;
 import com.LastBite.modules.auth.dto.request.RegisterRequest;
 import com.LastBite.modules.auth.dto.request.ResendOtpRequest;
@@ -62,6 +64,14 @@ public class AuthController {
                 .body(ApiResponse.ok(null, "Đăng ký thành công - vui lòng kiểm tra email để xác minh tài khoản"));
     }
 
+    @PostMapping("/register-merchant")
+    @Operation(summary = "Đăng ký tài khoản chủ cửa hàng, chưa tạo hồ sơ cửa hàng")
+    public ResponseEntity<ApiResponse<Void>> registerMerchant(@Valid @RequestBody RegisterRequest request) {
+        authService.registerMerchant(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(null, "Đăng ký bán hàng thành công - vui lòng kiểm tra email để xác minh tài khoản"));
+    }
+
     @PostMapping("/register-partner")
     @Operation(summary = "Đăng ký tài khoản đối tác, tạo cửa hàng và gửi link xác minh email")
     public ResponseEntity<ApiResponse<Void>> registerPartner(@Valid @RequestBody RegisterPartnerRequest request) {
@@ -100,6 +110,23 @@ public class AuthController {
     @Operation(summary = "Đăng nhập bằng email và mật khẩu")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         return authResponse(authService.login(request), "Đăng nhập thành công");
+    }
+
+    @PostMapping("/store-login")
+    @Operation(summary = "Dang nhap MANAGER/STAFF bang username")
+    public ResponseEntity<ApiResponse<AuthResponse>> storeLogin(@Valid @RequestBody StoreLoginRequest request) {
+        return authResponse(authService.storeLogin(request), "Dang nhap cua hang thanh cong");
+    }
+
+    @PostMapping("/change-initial-password")
+    @Operation(summary = "Doi mat khau bat buoc o lan dang nhap dau")
+    public ResponseEntity<ApiResponse<Void>> changeInitialPassword(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody InitialPasswordChangeRequest request) {
+        authService.changeInitialPassword(extractUserId(jwt), request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
+                .body(ApiResponse.ok(null, "Da doi mat khau, vui long dang nhap lai"));
     }
 
     @PostMapping("/google")

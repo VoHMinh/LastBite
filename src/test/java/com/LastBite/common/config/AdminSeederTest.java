@@ -1,6 +1,7 @@
 package com.LastBite.common.config;
 
 import com.LastBite.modules.auth.repository.UserRepository;
+import com.LastBite.modules.auth.service.impl.RoleAssignmentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.core.env.Environment;
@@ -20,6 +21,7 @@ class AdminSeederTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     private final Environment environment = mock(Environment.class);
+    private final RoleAssignmentService roleAssignmentService = mock(RoleAssignmentService.class);
     private final ApplicationArguments arguments = mock(ApplicationArguments.class);
 
     @Test
@@ -57,7 +59,8 @@ class AdminSeederTest {
     }
 
     private AdminSeeder seederWith(String password) {
-        AdminSeeder seeder = new AdminSeeder(userRepository, passwordEncoder, environment);
+        AdminSeeder seeder = new AdminSeeder(
+                userRepository, passwordEncoder, environment, roleAssignmentService);
         ReflectionTestUtils.setField(seeder, "adminEmail", "admin@lastbite.com");
         ReflectionTestUtils.setField(seeder, "adminPassword", password);
         ReflectionTestUtils.setField(seeder, "adminFullName", "LastBite Admin");

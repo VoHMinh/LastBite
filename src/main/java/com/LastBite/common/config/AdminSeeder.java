@@ -2,9 +2,11 @@ package com.LastBite.common.config;
 
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.enums.AuthProvider;
+import com.LastBite.modules.auth.enums.AccountType;
 import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.enums.UserStatus;
 import com.LastBite.modules.auth.repository.UserRepository;
+import com.LastBite.modules.auth.service.impl.RoleAssignmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +36,7 @@ public class AdminSeeder implements ApplicationRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final Environment environment;
+    private final RoleAssignmentService roleAssignmentService;
 
     @Value("${app.admin.email:admin@lastbite.com}")
     private String adminEmail;
@@ -61,12 +64,13 @@ public class AdminSeeder implements ApplicationRunner {
                     .email(adminEmail)
                     .passwordHash(passwordEncoder.encode(adminPassword))
                     .fullName(adminFullName)
-                    .role(UserRole.ADMIN)
+                    .accountType(AccountType.PLATFORM)
                     .status(UserStatus.ACTIVE)
                     .authProvider(AuthProvider.LOCAL)
                     .emailVerified(true)
                     .phoneVerified(false)
                     .build();
+            roleAssignmentService.addPlatformRole(admin, UserRole.ADMIN);
 
             userRepository.save(admin);
             log.info("Đã tạo tài khoản admin mặc định: {} (role=ADMIN)", adminEmail);

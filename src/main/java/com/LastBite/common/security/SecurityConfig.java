@@ -45,7 +45,9 @@ public class SecurityConfig {
     /** Endpoint công khai KHÔNG yêu cầu xác thực. */
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/login",
+            "/api/v1/auth/store-login",
             "/api/v1/auth/register",
+            "/api/v1/auth/register-merchant",
             "/api/v1/auth/register-partner",
             "/api/v1/auth/verify-email",
             "/api/v1/auth/verify-email-link",

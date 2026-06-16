@@ -1,6 +1,8 @@
 package com.LastBite.modules.auth.service;
 
 import com.LastBite.modules.auth.dto.request.LoginRequest;
+import com.LastBite.modules.auth.dto.request.StoreLoginRequest;
+import com.LastBite.modules.auth.dto.request.InitialPasswordChangeRequest;
 import com.LastBite.modules.auth.dto.request.RegisterPartnerRequest;
 import com.LastBite.modules.auth.dto.request.RegisterRequest;
 import com.LastBite.modules.auth.dto.request.ResendOtpRequest;
@@ -14,6 +16,8 @@ public interface AuthServicePort {
 
     void register(RegisterRequest request);
 
+    void registerMerchant(RegisterRequest request);
+
     void registerPartner(RegisterPartnerRequest request);
 
     AuthResponse verifyEmail(VerifyEmailRequest request);
@@ -25,6 +29,10 @@ public interface AuthServicePort {
     void resendVerificationLink(ResendOtpRequest request);
 
     AuthResponse login(LoginRequest request);
+
+    AuthResponse storeLogin(StoreLoginRequest request);
+
+    void changeInitialPassword(UUID userId, InitialPasswordChangeRequest request);
 
     AuthResponse refresh(String rawRefreshToken);
 

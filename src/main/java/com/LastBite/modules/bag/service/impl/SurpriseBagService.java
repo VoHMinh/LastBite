@@ -26,6 +26,8 @@ import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.bag.service.SurpriseBagServicePort;
 import com.LastBite.modules.notification.service.NotificationServicePort;
+import com.LastBite.modules.merchant.service.StoreAccessService;
+import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
@@ -63,12 +65,27 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     private final UserRepository userRepository;
     private final BagPricingService pricingService;
     private final NotificationServicePort notificationService;
+    private final StoreAccessService storeAccessService;
     private final Clock clock;
 
     @Transactional
     @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public SurpriseBagResponse create(UUID ownerId, CreateSurpriseBagRequest request) {
         Store store = getReadyStore(ownerId);
+        return createForStore(store, request);
+    }
+
+    @Transactional
+    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    public SurpriseBagResponse create(UUID actorId, UUID storeId, CreateSurpriseBagRequest request) {
+        Store store = storeAccessService.require(actorId, storeId, java.util.Set.of(UserRole.MANAGER));
+        if (store.getStatus() != StoreStatus.ACTIVE || store.getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new ApiException(ErrorCode.FORBIDDEN, "Cửa hàng phải được duyệt và đang hoạt động");
+        }
+        return createForStore(store, request);
+    }
+
+    private SurpriseBagResponse createForStore(Store store, CreateSurpriseBagRequest request) {
         validatePickupWindow(request.getPickupStartTime(), request.getPickupEndTime());
         BagPriceTier tier = getPriceTier(request.getCategory(), request.getBagSize());
 
@@ -106,7 +123,17 @@ public class SurpriseBagService implements SurpriseBagServicePort {
 
     @Transactional(readOnly = true)
     public PageResponse<SurpriseBagResponse> list(UUID ownerId, Pageable pageable) {
-        var page = bagRepository.findByStoreOwnerIdAndStatusNot(ownerId, BagStatus.ARCHIVED, pageable)
+        var page = bagRepository.findByStoreBusinessProfileOwnerIdAndStatusNot(
+                        ownerId, BagStatus.ARCHIVED, pageable)
+                .map(bag -> toBagResponse(bag, findTodayStock(bag.getId())));
+        return new PageResponse<>(page.getContent(), page.getNumber(), page.getSize(),
+                page.getTotalElements(), page.getTotalPages());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<SurpriseBagResponse> list(UUID actorId, UUID storeId, Pageable pageable) {
+        storeAccessService.require(actorId, storeId, java.util.Set.of(UserRole.MANAGER, UserRole.STAFF));
+        var page = bagRepository.findByStoreIdAndStatusNot(storeId, BagStatus.ARCHIVED, pageable)
                 .map(bag -> toBagResponse(bag, findTodayStock(bag.getId())));
         return new PageResponse<>(page.getContent(), page.getNumber(), page.getSize(),
                 page.getTotalElements(), page.getTotalPages());
@@ -308,7 +335,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     private Store getReadyStore(UUID ownerId) {
-        Store store = storeRepository.findByOwnerId(ownerId)
+        Store store = storeRepository.findFirstByBusinessProfileOwnerIdOrderByCreatedAtAsc(ownerId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND, "Bạn chưa có cửa hàng"));
         if (store.getStatus() != StoreStatus.ACTIVE) {
             throw new ApiException(ErrorCode.FORBIDDEN, "Cửa hàng chưa ở trạng thái hoạt động");
@@ -320,7 +347,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     private SurpriseBag getOwnedBag(UUID ownerId, UUID bagId) {
-        return bagRepository.findByIdAndStoreOwnerId(bagId, ownerId)
+        return bagRepository.findByIdAndStoreBusinessProfileOwnerId(bagId, ownerId)
                 .orElseThrow(() -> new ApiException(ErrorCode.BAG_NOT_FOUND));
     }
 
