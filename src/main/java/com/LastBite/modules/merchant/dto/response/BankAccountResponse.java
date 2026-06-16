@@ -1,6 +1,6 @@
 package com.LastBite.modules.merchant.dto.response;
 
-import com.LastBite.modules.merchant.enums.ReviewStatus;
+import com.LastBite.modules.merchant.enums.BankAccountVerificationStatus;
 import lombok.*;
 
 import java.util.UUID;
@@ -17,6 +17,6 @@ public class BankAccountResponse {
     private String accountHolderName;
     private String maskedAccountNumber;
     private boolean defaultAccount;
-    private ReviewStatus verificationStatus;
+    private BankAccountVerificationStatus verificationStatus;
     private String rejectionReason;
 }

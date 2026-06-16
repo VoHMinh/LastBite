@@ -2,7 +2,9 @@ package com.LastBite.modules.order.repository;
 
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.enums.OrderStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -16,6 +18,20 @@ import java.util.UUID;
 public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     Optional<Order> findByUser_IdAndIdempotencyKey(UUID userId, String idempotencyKey);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT o FROM Order o
+        JOIN FETCH o.user
+        JOIN FETCH o.store
+        JOIN FETCH o.bag
+        JOIN FETCH o.dailyStock
+        WHERE o.id = :orderId
+    """)
+    Optional<Order> findByIdForUpdate(@Param("orderId") UUID orderId);
+
+    @Query("SELECT o FROM Order o WHERE o.id = :orderId AND o.user.id = :userId")
+    Optional<Order> findByIdAndUserId(@Param("orderId") UUID orderId, @Param("userId") UUID userId);
 
     @Query("""
         SELECT o FROM Order o
@@ -71,4 +87,16 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
                                      @Param("pickupDate") LocalDate pickupDate,
                                      @Param("nowTime") LocalTime nowTime,
                                      @Param("thresholdTime") LocalTime thresholdTime);
+
+    @Query("""
+        SELECT o FROM Order o
+        JOIN FETCH o.user
+        JOIN FETCH o.store
+        JOIN FETCH o.bag
+        WHERE o.status IN :statuses
+          AND (o.pickupDate < :today OR (o.pickupDate = :today AND o.pickupEndTime <= :cutoffTime))
+    """)
+    List<Order> findOrdersPastPickupWindow(@Param("statuses") List<OrderStatus> statuses,
+                                           @Param("today") LocalDate today,
+                                           @Param("cutoffTime") LocalTime cutoffTime);
 }

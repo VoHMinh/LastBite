@@ -8,4 +8,8 @@ import java.util.UUID;
 public interface OrderServicePort {
 
     OrderResponse create(UUID userId, CreateOrderRequest request);
+
+    OrderResponse get(UUID userId, UUID orderId);
+
+    OrderResponse cancel(UUID userId, UUID orderId);
 }
