@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -32,6 +33,7 @@ public class StoreResponse implements Serializable {
     private Double lng;
     private String coverImageUrl;
     private String logoUrl;
+    private List<String> galleryImageUrls;
     private StoreStatus status;
     private VerificationStatus verificationStatus;
     private double avgRating;

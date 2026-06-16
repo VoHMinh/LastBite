@@ -41,6 +41,12 @@ public class JwtAuthConverter implements Converter<Jwt, AbstractAuthenticationTo
         }
 
         List<GrantedAuthority> authorities = new ArrayList<>();
+        Boolean mustChangePassword = jwt.getClaim("must_change_password");
+        if (Boolean.TRUE.equals(mustChangePassword)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_PASSWORD_CHANGE_REQUIRED"));
+            String principal = jwt.getSubject() != null ? jwt.getSubject() : userId;
+            return new JwtAuthenticationToken(jwt, authorities, principal);
+        }
 
         // Trích xuất role từ claim JWT
         List<String> roles = jwt.getClaimAsStringList("roles");

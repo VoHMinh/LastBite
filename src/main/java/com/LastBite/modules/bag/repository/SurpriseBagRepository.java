@@ -16,10 +16,17 @@ import java.util.UUID;
 public interface SurpriseBagRepository extends JpaRepository<SurpriseBag, UUID> {
 
     @EntityGraph(attributePaths = {"store"})
-    Page<SurpriseBag> findByStoreOwnerIdAndStatusNot(UUID ownerId, BagStatus status, Pageable pageable);
+    Page<SurpriseBag> findByStoreBusinessProfileOwnerIdAndStatusNot(
+            UUID ownerId, BagStatus status, Pageable pageable);
 
     @EntityGraph(attributePaths = {"store"})
-    Optional<SurpriseBag> findByIdAndStoreOwnerId(UUID id, UUID ownerId);
+    Optional<SurpriseBag> findByIdAndStoreBusinessProfileOwnerId(UUID id, UUID ownerId);
+
+    @EntityGraph(attributePaths = {"store"})
+    Page<SurpriseBag> findByStoreIdAndStatusNot(UUID storeId, BagStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"store"})
+    Optional<SurpriseBag> findByIdAndStoreId(UUID id, UUID storeId);
 
     @EntityGraph(attributePaths = {"store"})
     List<SurpriseBag> findByStatus(BagStatus status);

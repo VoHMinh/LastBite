@@ -1,0 +1,1054 @@
+// LastBite - Database Reference / Master DBML
+// Source of truth checked against:
+// - src/main/resources/db/migration/V1__init_auth_schema.sql ... V12__commerce_payment_refund_pickup_rating_settlement.sql
+// - JPA entities under src/main/java/com/LastBite/modules
+//
+// Scope rule:
+// This file documents only tables and columns that exist in the current backend schema.
+// Future voucher/campaign tables are intentionally omitted until implemented.
+
+// ---------------------------------------------------------------------------
+// AUTH, USERS, ROLES
+// ---------------------------------------------------------------------------
+
+Table users {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  email varchar(255) [unique, note: 'Nullable after V11 to support store member accounts']
+  username varchar(80) [note: 'Unique lower(username) when not null']
+  password_hash varchar(255)
+  full_name varchar(255) [not null]
+  phone varchar(20) [unique]
+  avatar_url varchar(500)
+  account_type varchar(30) [not null, default: 'PLATFORM', note: 'PLATFORM | STORE_MEMBER']
+  status varchar(50) [not null, default: 'ACTIVE', note: 'ACTIVE | INACTIVE | BANNED']
+  auth_provider varchar(20) [not null, default: 'LOCAL', note: 'LOCAL | GOOGLE | ZALO']
+  email_verified boolean [not null, default: false]
+  phone_verified boolean [not null, default: false]
+  must_change_password boolean [not null, default: false]
+  last_login_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    email [unique, name: 'idx_users_email']
+    phone [unique]
+    status [name: 'idx_users_status']
+    username [unique, name: 'uq_users_username_lower', note: 'Actual index is LOWER(username) WHERE username IS NOT NULL']
+  }
+}
+
+Table roles {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  code varchar(50) [unique, not null, note: 'CUSTOMER | MERCHANT_OWNER | ADMIN | MANAGER | STAFF']
+  scope varchar(20) [not null, note: 'PLATFORM | STORE']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    code [unique]
+  }
+}
+
+Table user_roles {
+  user_id uuid [not null, ref: > users.id]
+  role_id uuid [not null, ref: > roles.id]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, role_id) [pk]
+    user_id [name: 'idx_user_roles_user_id']
+  }
+}
+
+Table refresh_tokens {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  token_hash varchar(255) [unique, not null, note: 'SHA-256 hash of refresh token']
+  device_info varchar(500)
+  expires_at timestamptz [not null]
+  revoked boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'idx_refresh_tokens_user_id']
+    token_hash [unique, name: 'idx_refresh_tokens_token_hash']
+    expires_at [name: 'idx_refresh_tokens_expires_at']
+  }
+}
+
+Table email_verification_tokens {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  otp_code varchar(6) [note: 'Nullable after V5 because email link verification uses token_hash']
+  token_hash varchar(255) [unique, note: 'Partial unique index where token_hash is not null']
+  attempts integer [not null, default: 0, note: '0..5']
+  verified boolean [not null, default: false]
+  expires_at timestamptz [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'idx_email_verify_user_id']
+    expires_at [name: 'idx_email_verify_expires']
+    token_hash [unique, name: 'uq_email_verify_token_hash']
+  }
+}
+
+Table store_registrations {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  business_name varchar(255) [not null]
+  business_license_number varchar(100)
+  business_license_image_url varchar(500)
+  address varchar(500) [not null]
+  status varchar(30) [not null, default: 'PENDING', note: 'PENDING | APPROVED | REJECTED']
+  reviewed_by uuid [ref: > users.id]
+  reviewed_at timestamptz
+  rejection_reason varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'idx_store_reg_user_id']
+    status [name: 'idx_store_reg_status']
+  }
+
+  Note: 'Legacy/simple partner application table from V1/V2. Merchant platform review tables were added in V11.'
+}
+
+// ---------------------------------------------------------------------------
+// CUSTOMER PROFILE
+// ---------------------------------------------------------------------------
+
+Table user_addresses {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  label varchar(50) [not null, default: 'HOME', note: 'HOME | OFFICE | OTHER by convention']
+  full_address text [not null]
+  lat float
+  lng float
+  is_default boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    user_id [name: 'idx_user_addresses_user_id']
+  }
+}
+
+Table favorite_stores {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > users.id]
+  store_id uuid [not null, ref: > stores.id]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'idx_favorite_stores_user_id']
+    (user_id, store_id) [unique, name: 'uq_favorite_stores_user_store']
+  }
+}
+
+// ---------------------------------------------------------------------------
+// STORES
+// ---------------------------------------------------------------------------
+
+Table stores {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  created_by_user_id uuid [not null, ref: > users.id, note: 'Column was owner_id before V11']
+  business_profile_id uuid [not null, ref: > merchant_business_profiles.id]
+  name varchar(255) [not null]
+  slug varchar(300) [unique, not null]
+  description text
+  category varchar(50) [not null, note: 'BAKERY | RESTAURANT | CAFE | GROCERY | CONVENIENCE']
+  phone varchar(20)
+  email varchar(255)
+  address text [not null]
+  district varchar(100)
+  city varchar(100) [not null, default: 'ho-chi-minh']
+  lat float
+  lng float
+  pickup_instructions text
+  storefront_image_url varchar(500)
+  storefront_image_key varchar(500)
+  menu_image_url varchar(500)
+  menu_image_key varchar(500)
+  cover_image_url varchar(500)
+  cover_image_key varchar(500)
+  logo_url varchar(500)
+  logo_key varchar(500)
+  business_license_number varchar(100)
+  business_license_image_url varchar(500)
+  business_license_image_key varchar(500)
+  status varchar(30) [not null, default: 'DRAFT', note: 'DRAFT | ACTIVE | PAUSED | CLOSED | SUSPENDED']
+  verification_status varchar(30) [not null, default: 'DRAFT', note: 'DRAFT | PENDING | CHANGES_REQUESTED | VERIFIED | REJECTED']
+  rejection_reason varchar(1000)
+  avg_rating float [not null, default: 0]
+  total_ratings integer [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    slug [unique, name: 'idx_stores_slug']
+    created_by_user_id [name: 'idx_stores_created_by_user_id']
+    business_profile_id [name: 'idx_stores_business_profile_id']
+    status [name: 'idx_stores_status']
+    category [name: 'idx_stores_category']
+    verification_status [name: 'idx_stores_verification']
+    (lat, lng) [name: 'idx_stores_lat_lng']
+    (district, status) [name: 'idx_stores_district_status']
+    (city, district, status) [name: 'idx_stores_city_district_status']
+  }
+}
+
+Table store_schedules {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  store_id uuid [not null, ref: > stores.id]
+  day_of_week integer [not null, note: '0=Sunday ... 6=Saturday']
+  open_time time [not null]
+  close_time time [not null]
+  is_open boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    store_id [name: 'idx_store_schedules_store_id']
+    (store_id, day_of_week) [unique, name: 'uq_store_day']
+  }
+}
+
+Table store_closure_days {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  store_id uuid [not null, ref: > stores.id]
+  closed_date date [not null]
+  reason varchar(500)
+  created_by_user_id uuid [ref: > users.id]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (store_id, closed_date) [unique, name: 'uq_store_closure_day']
+    (store_id, closed_date) [name: 'idx_store_closure_days_store_date']
+  }
+}
+
+Table store_special_hours {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  store_id uuid [not null, ref: > stores.id]
+  special_date date [not null]
+  open_time time
+  close_time time
+  is_closed boolean [not null, default: false]
+  reason varchar(500)
+  created_by_user_id uuid [ref: > users.id]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (store_id, special_date) [unique, name: 'uq_store_special_hours']
+    (store_id, special_date) [name: 'idx_store_special_hours_store_date']
+  }
+
+  Note: 'Constraint: is_closed=true OR open_time/close_time are present and close_time > open_time.'
+}
+
+Table store_reliability_stats {
+  store_id uuid [primary key, ref: - stores.id]
+  total_bags_listed integer [not null, default: 0]
+  total_bags_sold integer [not null, default: 0]
+  total_bags_fulfilled integer [not null, default: 0]
+  total_bags_no_show integer [not null, default: 0]
+  fulfillment_rate float [not null, default: 1.0, note: '0..1']
+  warning_count integer [not null, default: 0]
+  is_under_review boolean [not null, default: false]
+  suspended_until timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+// ---------------------------------------------------------------------------
+// MERCHANT PLATFORM / ONBOARDING / REVIEW
+// ---------------------------------------------------------------------------
+
+Table merchant_business_profiles {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  owner_user_id uuid [unique, not null, ref: > users.id]
+  legal_type varchar(40) [not null, note: 'INDIVIDUAL | HOUSEHOLD_BUSINESS | COMPANY | COMPANY_BRANCH']
+  legal_name varchar(255)
+  representative_full_name varchar(255) [not null]
+  representative_phone varchar(20)
+  representative_email varchar(255)
+  identity_document_type varchar(30)
+  identity_document_number varchar(100)
+  tax_code varchar(50)
+  registration_number varchar(100)
+  parent_company_name varchar(255)
+  parent_company_tax_code varchar(50)
+  business_address text
+  review_status varchar(30) [not null, default: 'DRAFT', note: 'DRAFT | PENDING_REVIEW | CHANGES_REQUESTED | APPROVED | REJECTED']
+  rejection_reason varchar(1000)
+  approved_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    owner_user_id [unique]
+    review_status [name: 'idx_business_profiles_review_status']
+  }
+}
+
+Table merchant_business_profile_versions {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  business_profile_id uuid [not null, ref: > merchant_business_profiles.id]
+  version_number integer [not null]
+  snapshot_json text [not null]
+  review_status varchar(30) [not null, default: 'DRAFT', note: 'DRAFT | PENDING_REVIEW | CHANGES_REQUESTED | APPROVED | REJECTED']
+  submitted_at timestamptz
+  reviewed_by uuid [ref: > users.id]
+  reviewed_at timestamptz
+  rejection_reason varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (business_profile_id, version_number) [unique]
+  }
+}
+
+Table merchant_bank_accounts {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  business_profile_id uuid [not null, ref: > merchant_business_profiles.id]
+  store_id uuid [ref: > stores.id]
+  bank_code varchar(30) [not null]
+  bank_name varchar(150) [not null]
+  account_holder_name varchar(255) [not null]
+  account_number_encrypted text [not null]
+  account_number_last4 varchar(4) [not null]
+  is_default boolean [not null, default: false]
+  verification_status varchar(30) [not null, default: 'PENDING_REVIEW', note: 'PENDING_REVIEW | APPROVED | REJECTED']
+  rejection_reason varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    business_profile_id [name: 'uq_business_default_bank_account', note: 'Actual index is partial unique on business_profile_id where is_default=true and store_id is null']
+  }
+}
+
+Table store_versions {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  store_id uuid [not null, ref: > stores.id]
+  version_number integer [not null]
+  snapshot_json text [not null]
+  review_status varchar(30) [not null, default: 'DRAFT', note: 'DRAFT | PENDING_REVIEW | CHANGES_REQUESTED | APPROVED | REJECTED']
+  submitted_at timestamptz
+  reviewed_by uuid [ref: > users.id]
+  reviewed_at timestamptz
+  rejection_reason varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (store_id, version_number) [unique]
+  }
+}
+
+Table store_review_applications {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  store_id uuid [not null, ref: > stores.id]
+  business_profile_version_id uuid [ref: > merchant_business_profile_versions.id]
+  store_version_id uuid [ref: > store_versions.id]
+  status varchar(30) [not null, default: 'DRAFT', note: 'DRAFT | PENDING_REVIEW | CHANGES_REQUESTED | APPROVED | REJECTED']
+  submitted_by uuid [not null, ref: > users.id]
+  submitted_at timestamptz
+  reviewed_by uuid [ref: > users.id]
+  reviewed_at timestamptz
+  decision_note varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (status, submitted_at) [name: 'idx_store_review_applications_status']
+  }
+}
+
+Table merchant_store_members {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  user_id uuid [unique, not null, ref: > users.id]
+  store_id uuid [not null, ref: > stores.id]
+  role_id uuid [not null, ref: > roles.id]
+  status varchar(30) [not null, default: 'ACTIVE', note: 'ACTIVE | SUSPENDED | TERMINATED']
+  created_by_user_id uuid [not null, ref: > users.id]
+  joined_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    user_id [unique, name: 'uq_store_member_user']
+    (store_id, user_id) [unique, name: 'uq_store_member_pair']
+    store_id [name: 'idx_store_members_store']
+  }
+}
+
+Table merchant_documents {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  business_profile_id uuid [ref: > merchant_business_profiles.id]
+  store_id uuid [ref: > stores.id]
+  review_application_id uuid [ref: > store_review_applications.id]
+  media_upload_id uuid [unique, not null, ref: - media_uploads.id]
+  document_type varchar(60) [not null]
+  review_status varchar(30) [not null, default: 'PENDING_REVIEW', note: 'PENDING_REVIEW | APPROVED | REJECTED']
+  expires_at date
+  rejection_reason varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    media_upload_id [unique]
+  }
+
+  Note: 'Target constraint: business_profile_id IS NOT NULL OR store_id IS NOT NULL.'
+}
+
+Table review_feedback_items {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  review_application_id uuid [not null, ref: > store_review_applications.id]
+  section varchar(50) [not null]
+  field_path varchar(150) [not null]
+  message varchar(1000) [not null]
+  resolved boolean [not null, default: false]
+  resolved_at timestamptz
+  created_by uuid [not null, ref: > users.id]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+}
+
+// ---------------------------------------------------------------------------
+// BAGS, INVENTORY, ORDERS
+// ---------------------------------------------------------------------------
+
+Table bag_price_tiers {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  category varchar(50) [not null, note: 'BAKERY | RESTAURANT | CAFE | GROCERY | CONVENIENCE']
+  bag_size varchar(30) [not null, note: 'MINI | SMALL | STANDARD | LARGE']
+  minimum_value numeric(10,0) [not null]
+  base_sale_price numeric(10,0) [not null]
+  dynamic_min_price numeric(10,0) [not null]
+  dynamic_max_price numeric(10,0) [not null]
+  platform_fee numeric(10,0) [not null, default: 4000]
+  active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (category, bag_size) [unique, name: 'uq_bag_price_tiers_category_size']
+    active [name: 'idx_bag_price_tiers_active']
+  }
+}
+
+Table surprise_bags {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  store_id uuid [not null, ref: > stores.id]
+  name varchar(255) [not null]
+  description text
+  bag_type varchar(30) [not null, default: 'STANDARD', note: 'STANDARD | BREAD | MEAL | GROCERY | MIXED']
+  diet_type varchar(30) [not null, default: 'MEAT', note: 'MEAT | VEGETARIAN | VEGAN']
+  category varchar(50) [not null, note: 'BAKERY | RESTAURANT | CAFE | GROCERY | CONVENIENCE']
+  bag_size varchar(30) [not null, note: 'MINI | SMALL | STANDARD | LARGE']
+  photos text[] [not null, default: `ARRAY[]::TEXT[]`]
+  minimum_value numeric(10,0) [not null]
+  base_sale_price numeric(10,0) [not null]
+  dynamic_min_price numeric(10,0) [not null]
+  dynamic_max_price numeric(10,0) [not null]
+  dynamic_pricing_enabled boolean [not null, default: true]
+  platform_fee numeric(10,0) [not null, default: 4000]
+  max_per_order integer [not null, default: 1, note: '1..3']
+  container_provided boolean [not null, default: true]
+  carrier_bag_provided boolean [not null, default: true]
+  packaging_note varchar(500)
+  pickup_start_time time [not null]
+  pickup_end_time time [not null]
+  available_days integer[] [not null, default: `ARRAY[0,1,2,3,4,5,6]`, note: '0=Sunday ... 6=Saturday']
+  status varchar(30) [not null, default: 'DRAFT', note: 'DRAFT | ACTIVE | PAUSED | ARCHIVED']
+  version integer [not null, default: 1]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    store_id [name: 'idx_surprise_bags_store_id']
+    (store_id, status) [name: 'idx_surprise_bags_store_status']
+    (category, bag_size) [name: 'idx_surprise_bags_category_size']
+    (pickup_start_time, pickup_end_time) [name: 'idx_surprise_bags_pickup_window']
+    (diet_type, bag_type) [name: 'idx_surprise_bags_diet_type_bag_type']
+  }
+}
+
+Table bag_daily_stocks {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  bag_id uuid [not null, ref: > surprise_bags.id]
+  store_id uuid [not null, ref: > stores.id]
+  date date [not null]
+  quantity integer [not null, default: 0, note: '0..50']
+  reserved integer [not null, default: 0]
+  sold integer [not null, default: 0]
+  status varchar(30) [not null, default: 'ACTIVE', note: 'ACTIVE | SOLD_OUT | CANCELLED | EXPIRED']
+  version integer [not null, default: 1]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (bag_id, date) [unique, name: 'uq_bag_daily_stocks_bag_date']
+    (store_id, date, status) [name: 'idx_bag_daily_stocks_store_date_status']
+    date [name: 'idx_bag_daily_stocks_date']
+    (date, status) [name: 'idx_bag_daily_stocks_date_status']
+    (store_id, date) [name: 'idx_bag_daily_stocks_store_date']
+  }
+
+  Note: 'Constraint: quantity >= 0, reserved >= 0, sold >= 0, reserved + sold <= quantity.'
+}
+
+Table orders {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  order_number varchar(30) [unique, not null]
+  user_id uuid [not null, ref: > users.id]
+  store_id uuid [not null, ref: > stores.id]
+  bag_id uuid [not null, ref: > surprise_bags.id]
+  daily_stock_id uuid [not null, ref: > bag_daily_stocks.id]
+  quantity integer [not null, default: 1, note: '1..3']
+  unit_price numeric(10,0) [not null]
+  platform_fee numeric(10,0) [not null]
+  subtotal numeric(10,0) [not null]
+  discount_amount numeric(10,0) [not null, default: 0]
+  final_amount numeric(10,0) [not null]
+  status varchar(30) [not null, default: 'PENDING_PAYMENT', note: 'PENDING_PAYMENT | PAID | READY_FOR_PICKUP | PICKED_UP | EXPIRED | CANCELLED | REFUNDED']
+  pickup_code varchar(20) [unique, not null]
+  pickup_date date [not null]
+  pickup_start_time time [not null]
+  pickup_end_time time [not null]
+  reserved_until timestamptz [not null]
+  payment_expires_at timestamptz
+  paid_at timestamptz
+  picked_up_at timestamptz
+  cancelled_at timestamptz
+  expired_at timestamptz
+  refund_status varchar(30) [not null, default: 'NONE', note: 'NONE | REQUESTED | APPROVED | REJECTED | REFUNDED | PARTIALLY_REFUNDED']
+  pickup_qr_token_hash varchar(128)
+  pickup_code_hash varchar(128)
+  idempotency_key varchar(100) [unique, not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    order_number [unique, name: 'idx_orders_order_number']
+    idempotency_key [unique, name: 'idx_orders_idempotency_key']
+    user_id [name: 'idx_orders_user_id']
+    store_id [name: 'idx_orders_store_id']
+    status [name: 'idx_orders_status']
+    reserved_until [name: 'idx_orders_reserved_until']
+    pickup_date [name: 'idx_orders_pickup_date']
+    payment_expires_at [name: 'idx_orders_payment_expires_at']
+    (pickup_date, pickup_start_time, pickup_end_time) [name: 'idx_orders_pickup_window']
+    refund_status [name: 'idx_orders_refund_status']
+  }
+}
+
+Table stock_audit_logs {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  bag_id uuid [not null, ref: > surprise_bags.id]
+  daily_stock_id uuid [ref: > bag_daily_stocks.id]
+  actor_id uuid [ref: > users.id]
+  action varchar(40) [not null, note: 'STOCK_ADD | STOCK_REDUCE | STOCK_SET | RESERVE | RESERVE_CANCEL | SELL | EXPIRE_UNSOLD']
+  delta integer [not null]
+  quantity_before integer [not null]
+  quantity_after integer [not null]
+  reason text
+  order_id uuid [ref: > orders.id]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    bag_id [name: 'idx_stock_audit_logs_bag_id']
+    daily_stock_id [name: 'idx_stock_audit_logs_daily_stock_id']
+    order_id [name: 'idx_stock_audit_logs_order_id']
+    created_at [name: 'idx_stock_audit_logs_created_at']
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PAYMENTS, WEBHOOKS, REFUNDS, PICKUP, LEDGER, SETTLEMENT, REVIEWS
+// ---------------------------------------------------------------------------
+
+Table payments {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  order_id uuid [unique, not null, ref: > orders.id]
+  user_id uuid [not null, ref: > users.id]
+  provider varchar(30) [not null, note: 'PAYOS | FAKE']
+  provider_order_code bigint [unique, not null]
+  provider_payment_link_id varchar(120)
+  amount numeric(10,0) [not null]
+  currency varchar(10) [not null, default: 'VND']
+  status varchar(30) [not null, default: 'PENDING', note: 'PENDING | SUCCEEDED | FAILED | CANCELLED | EXPIRED | REFUNDED | PARTIALLY_REFUNDED']
+  checkout_url varchar(1000)
+  qr_code text
+  expires_at timestamptz [not null]
+  paid_at timestamptz
+  cancelled_at timestamptz
+  failure_reason varchar(1000)
+  idempotency_key varchar(150) [unique, not null]
+  raw_provider_payload text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    order_id [name: 'idx_payments_order_id']
+    user_id [name: 'idx_payments_user_id']
+    status [name: 'idx_payments_status']
+    expires_at [name: 'idx_payments_expires_at']
+    (provider, provider_payment_link_id) [name: 'idx_payments_provider_link']
+  }
+}
+
+Table payment_transactions {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  payment_id uuid [not null, ref: > payments.id]
+  provider varchar(30) [not null]
+  provider_transaction_id varchar(120)
+  amount numeric(10,0) [not null]
+  currency varchar(10) [not null, default: 'VND']
+  status varchar(30) [not null, note: 'PENDING | SUCCEEDED | FAILED | CANCELLED']
+  provider_code varchar(30)
+  provider_description varchar(500)
+  paid_at timestamptz
+  raw_payload text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    payment_id [name: 'idx_payment_transactions_payment_id']
+    (provider, provider_transaction_id) [unique, name: 'uq_payment_transactions_provider_ref', note: 'Partial unique where provider_transaction_id is not null']
+  }
+}
+
+Table payment_webhooks {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  provider varchar(30) [not null, note: 'PAYOS | FAKE']
+  event_key varchar(220) [unique, not null]
+  provider_order_code bigint
+  payment_id uuid [ref: > payments.id]
+  signature varchar(255)
+  payload text [not null]
+  valid_signature boolean [not null, default: false]
+  processed boolean [not null, default: false]
+  processed_at timestamptz
+  failure_reason varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    provider_order_code [name: 'idx_payment_webhooks_provider_order_code']
+    processed [name: 'idx_payment_webhooks_processed']
+  }
+}
+
+Table payment_gateway_requests {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  payment_id uuid [ref: > payments.id]
+  provider varchar(30) [not null]
+  request_type varchar(40) [not null, note: 'CREATE_PAYMENT_LINK | CANCEL_PAYMENT_LINK | CREATE_PAYOUT | CREATE_REFUND']
+  idempotency_key varchar(160) [not null]
+  status varchar(30) [not null, note: 'PENDING | SUCCEEDED | FAILED']
+  request_payload text
+  response_payload text
+  provider_reference varchar(160)
+  error_message varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (provider, idempotency_key) [unique, name: 'uq_payment_gateway_requests_provider_idem']
+  }
+}
+
+Table order_status_history {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  order_id uuid [not null, ref: > orders.id]
+  from_status varchar(30)
+  to_status varchar(30) [not null]
+  actor_user_id uuid [ref: > users.id]
+  actor_type varchar(30) [not null, default: 'SYSTEM', note: 'CUSTOMER | MERCHANT | ADMIN | SYSTEM | PAYMENT_PROVIDER']
+  reason varchar(500)
+  metadata text
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    order_id [name: 'idx_order_status_history_order_id']
+    created_at [name: 'idx_order_status_history_created_at']
+  }
+}
+
+Table pickup_events {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  order_id uuid [not null, ref: > orders.id]
+  store_id uuid [not null, ref: > stores.id]
+  actor_user_id uuid [ref: > users.id]
+  event_type varchar(30) [not null, note: 'CONFIRMED | REJECTED | NO_SHOW']
+  channel varchar(30) [not null, note: 'MANUAL_CODE | QR_SCAN | SYSTEM']
+  notes varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    order_id [name: 'idx_pickup_events_order_id']
+    (store_id, created_at) [name: 'idx_pickup_events_store_created']
+  }
+}
+
+Table refund_requests {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  order_id uuid [not null, ref: > orders.id]
+  payment_id uuid [ref: > payments.id]
+  requested_by_user_id uuid [ref: > users.id]
+  reason varchar(40) [not null, note: 'STORE_CANCELLED | STORE_NO_STOCK | PAYMENT_AFTER_EXPIRY | QUALITY_ISSUE | ALLERGEN_OR_LABELING | QUANTITY_SHORTAGE | PLATFORM_ERROR | CUSTOMER_COMPLAINT | OTHER']
+  status varchar(30) [not null, default: 'PENDING_REVIEW', note: 'PENDING_REVIEW | APPROVED | REJECTED | PROCESSING | REFUNDED | FAILED | CANCELLED']
+  requested_amount numeric(10,0) [not null]
+  approved_amount numeric(10,0)
+  description text
+  decision_note varchar(1000)
+  reviewed_by uuid [ref: > users.id]
+  reviewed_at timestamptz
+  auto_created boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    order_id [name: 'idx_refund_requests_order_id']
+    status [name: 'idx_refund_requests_status']
+    created_at [name: 'idx_refund_requests_created_at']
+  }
+}
+
+Table refund_transactions {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  refund_request_id uuid [not null, ref: > refund_requests.id]
+  provider varchar(30) [not null, default: 'PAYOS']
+  provider_reference varchar(160)
+  amount numeric(10,0) [not null]
+  status varchar(30) [not null, default: 'PENDING', note: 'PENDING | SUCCEEDED | FAILED | CANCELLED']
+  method varchar(30) [not null, default: 'MANUAL_BANK_TRANSFER', note: 'ORIGINAL_SOURCE | MANUAL_BANK_TRANSFER | PAYOS_PAYOUT']
+  raw_payload text
+  processed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    refund_request_id [name: 'idx_refund_transactions_request_id']
+  }
+}
+
+Table admin_audit_logs {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  actor_user_id uuid [ref: > users.id]
+  action varchar(80) [not null]
+  target_type varchar(80) [not null]
+  target_id uuid
+  ip_address varchar(80)
+  user_agent varchar(500)
+  reason varchar(1000)
+  metadata text
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (actor_user_id, created_at) [name: 'idx_admin_audit_actor_created']
+    (target_type, target_id) [name: 'idx_admin_audit_target']
+  }
+}
+
+Table outbox_events {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  aggregate_type varchar(80) [not null]
+  aggregate_id uuid [not null]
+  event_type varchar(120) [not null]
+  payload text [not null]
+  status varchar(30) [not null, default: 'PENDING', note: 'PENDING | PROCESSING | PROCESSED | FAILED']
+  attempts integer [not null, default: 0]
+  available_at timestamptz [not null, default: `now()`]
+  processed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (status, available_at) [name: 'idx_outbox_events_status_available']
+  }
+}
+
+Table ledger_accounts {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  owner_type varchar(30) [not null, note: 'PLATFORM | MERCHANT | STORE | CUSTOMER']
+  owner_id uuid
+  account_type varchar(40) [not null, note: 'PLATFORM_CASH | PLATFORM_REVENUE | ESCROW | MERCHANT_PAYABLE | REFUND_LIABILITY']
+  currency varchar(10) [not null, default: 'VND']
+  balance numeric(14,0) [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (owner_type, owner_id, account_type, currency) [unique, name: 'uq_ledger_accounts_owner_type']
+    (owner_type, account_type, currency) [unique, name: 'uq_ledger_accounts_null_owner', note: 'Partial unique where owner_id is null']
+    (owner_type, owner_id, account_type, currency) [unique, name: 'uq_ledger_accounts_non_null_owner', note: 'Partial unique where owner_id is not null']
+  }
+}
+
+Table ledger_entries {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  account_id uuid [not null, ref: > ledger_accounts.id]
+  order_id uuid [ref: > orders.id]
+  payment_id uuid [ref: > payments.id]
+  refund_request_id uuid [ref: > refund_requests.id]
+  settlement_id uuid [ref: > merchant_settlements.id]
+  entry_type varchar(50) [not null, note: 'PAYMENT_CAPTURED | ESCROW_HELD | MERCHANT_PAYABLE | PLATFORM_COMMISSION | REFUND_RESERVED | REFUND_PAID | SETTLEMENT_PAYOUT']
+  entry_direction varchar(10) [not null, note: 'CREDIT | DEBIT']
+  amount numeric(14,0) [not null]
+  currency varchar(10) [not null, default: 'VND']
+  available_at timestamptz
+  description varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    account_id [name: 'idx_ledger_entries_account_id']
+    order_id [name: 'idx_ledger_entries_order_id']
+    settlement_id [name: 'idx_ledger_entries_settlement']
+    available_at [name: 'idx_ledger_entries_available']
+  }
+}
+
+Table platform_commissions {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  order_id uuid [unique, not null, ref: > orders.id]
+  payment_id uuid [ref: > payments.id]
+  gross_amount numeric(10,0) [not null]
+  platform_fee_amount numeric(10,0) [not null]
+  merchant_net_amount numeric(10,0) [not null]
+  rate_bps integer [not null, default: 0]
+  status varchar(30) [not null, default: 'PENDING', note: 'PENDING | EARNED | REVERSED']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+}
+
+Table merchant_settlements {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  business_profile_id uuid [not null, ref: > merchant_business_profiles.id]
+  store_id uuid [ref: > stores.id]
+  period_start date [not null]
+  period_end date [not null]
+  gross_amount numeric(14,0) [not null, default: 0]
+  commission_amount numeric(14,0) [not null, default: 0]
+  refund_amount numeric(14,0) [not null, default: 0]
+  net_amount numeric(14,0) [not null, default: 0]
+  status varchar(30) [not null, default: 'DRAFT', note: 'DRAFT | APPROVED | PAYOUT_PROCESSING | PAID | FAILED | CANCELLED']
+  approved_by uuid [ref: > users.id]
+  approved_at timestamptz
+  paid_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (business_profile_id, status) [name: 'idx_merchant_settlements_business_status']
+    (store_id, status) [name: 'idx_merchant_settlements_store_status']
+  }
+}
+
+Table store_payouts {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  settlement_id uuid [not null, ref: > merchant_settlements.id]
+  store_id uuid [ref: > stores.id]
+  bank_account_id uuid [ref: > merchant_bank_accounts.id]
+  provider varchar(30) [not null, default: 'PAYOS']
+  idempotency_key varchar(160) [unique, not null]
+  amount numeric(14,0) [not null]
+  status varchar(30) [not null, default: 'PENDING', note: 'PENDING | PROCESSING | PAID | FAILED | CANCELLED']
+  provider_payout_id varchar(160)
+  provider_transaction_id varchar(160)
+  failure_reason varchar(1000)
+  requested_at timestamptz
+  paid_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    settlement_id [name: 'idx_store_payouts_settlement_id']
+    status [name: 'idx_store_payouts_status']
+  }
+}
+
+Table reviews {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  order_id uuid [unique, not null, ref: > orders.id]
+  user_id uuid [not null, ref: > users.id]
+  store_id uuid [not null, ref: > stores.id]
+  bag_id uuid [not null, ref: > surprise_bags.id]
+  overall_rating integer [not null, note: '1..5']
+  collection_rating integer [not null, note: '1..5']
+  quality_rating integer [not null, note: '1..5']
+  variety_rating integer [not null, note: '1..5']
+  quantity_rating integer [not null, note: '1..5']
+  comment text
+  visible boolean [not null, default: true]
+  hidden_reason varchar(1000)
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (store_id, visible) [name: 'idx_reviews_store_visible']
+    user_id [name: 'idx_reviews_user_id']
+  }
+}
+
+Table review_photos {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  review_id uuid [not null, ref: > reviews.id]
+  media_upload_id uuid [unique, not null, ref: > media_uploads.id]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+}
+
+Table review_reports {
+  id uuid [primary key, default: `gen_random_uuid()`]
+  review_id uuid [not null, ref: > reviews.id]
+  reported_by_user_id uuid [not null, ref: > users.id]
+  reason varchar(50) [not null]
+  status varchar(30) [not null, default: 'PENDING', note: 'PENDING | APPROVED | REJECTED']
+  resolution_note varchar(1000)
+  resolved_by uuid [ref: > users.id]
+  resolved_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    status [name: 'idx_review_reports_status']
+  }
+}
+
+Table store_rating_summaries {
+  store_id uuid [primary key, ref: - stores.id]
+  review_count integer [not null, default: 0]
+  recent_review_count integer [not null, default: 0]
+  overall_rating_avg numeric(3,2) [not null, default: 0]
+  collection_rating_avg numeric(3,2) [not null, default: 0]
+  quality_rating_avg numeric(3,2) [not null, default: 0]
+  variety_rating_avg numeric(3,2) [not null, default: 0]
+  quantity_rating_avg numeric(3,2) [not null, default: 0]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+// ---------------------------------------------------------------------------
+// MEDIA
+// ---------------------------------------------------------------------------
+
+Table media_uploads {
+  id uuid [primary key]
+  owner_user_id uuid [not null, ref: > users.id]
+  purpose varchar(50) [not null, note: 'STORE_COVER | STORE_LOGO | STORE_STOREFRONT | STORE_MENU | STORE_GALLERY | BUSINESS_LICENSE | REPRESENTATIVE_ID | AUTHORIZATION_LETTER | BANK_PROOF | FOOD_SAFETY_CERTIFICATE | USER_AVATAR | FEEDBACK_IMAGE | FEEDBACK_VIDEO']
+  media_type varchar(20) [not null, note: 'IMAGE | VIDEO']
+  target_type varchar(50) [note: 'STORE | BUSINESS_PROFILE | USER | ORDER | FEEDBACK']
+  target_id uuid
+  bucket varchar(100) [not null]
+  object_key varchar(700) [unique, not null]
+  public_url varchar(1000) [note: 'Nullable after V11 for private uploads']
+  is_private boolean [not null, default: false]
+  content_type varchar(100) [not null]
+  file_size bigint [not null]
+  status varchar(30) [not null, note: 'PENDING | CONFIRMED']
+  confirmed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    owner_user_id [name: 'idx_media_uploads_owner_user_id']
+    purpose [name: 'idx_media_uploads_purpose']
+    status [name: 'idx_media_uploads_status']
+    (target_type, target_id) [name: 'idx_media_uploads_target']
+    object_key [unique]
+  }
+}
+
+// ---------------------------------------------------------------------------
+// NOTIFICATIONS
+// ---------------------------------------------------------------------------
+
+Table notification_devices {
+  id uuid [primary key]
+  user_id uuid [not null, ref: > users.id]
+  device_token varchar(500) [not null]
+  device_type varchar(20) [not null, note: 'IOS | ANDROID | WEB']
+  app_version varchar(50)
+  is_active boolean [not null, default: true]
+  last_seen_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (user_id, device_token) [unique, name: 'uq_notification_devices_user_token']
+    (user_id, is_active) [name: 'idx_notification_devices_user_active', note: 'Partial index where is_active=true']
+    (device_token, is_active) [name: 'idx_notification_devices_token_active', note: 'Partial index where is_active=true']
+  }
+}
+
+Table notifications {
+  id uuid [primary key]
+  recipient_id uuid [not null, ref: > users.id]
+  type varchar(60) [not null, note: 'See NotificationType enum in code']
+  category varchar(30) [not null, note: 'ORDER | PICKUP | PROMOTION | STORE | MERCHANT | SYSTEM']
+  title varchar(120) [not null]
+  body text [not null]
+  image_url varchar(500)
+  deep_link varchar(500)
+  reference_type varchar(30) [note: 'ORDER | BAG | STORE | CAMPAIGN | USER | SYSTEM']
+  reference_id uuid
+  payload jsonb
+  dedupe_key varchar(180) [unique]
+  is_read boolean [not null, default: false]
+  read_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    (recipient_id, created_at) [name: 'idx_notifications_recipient_created_at']
+    (recipient_id, is_read) [name: 'idx_notifications_recipient_unread', note: 'Partial index where is_read=false']
+    type [name: 'idx_notifications_type']
+    (reference_type, reference_id) [name: 'idx_notifications_reference']
+    dedupe_key [unique]
+  }
+}
+
+Table notification_deliveries {
+  id uuid [primary key]
+  notification_id uuid [not null, ref: > notifications.id]
+  device_id uuid [ref: > notification_devices.id]
+  channel varchar(20) [not null, note: 'FCM | EMAIL']
+  status varchar(20) [not null, note: 'PENDING | SENT | FAILED | SKIPPED']
+  provider_message_id varchar(255)
+  error_message text
+  retry_count integer [not null, default: 0]
+  sent_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    notification_id [name: 'idx_notification_deliveries_notification']
+    status [name: 'idx_notification_deliveries_status']
+  }
+}
+
+Table notification_preferences {
+  id uuid [primary key]
+  user_id uuid [not null, ref: > users.id]
+  category varchar(30) [not null, note: 'ORDER | PICKUP | PROMOTION | STORE | MERCHANT | SYSTEM']
+  push_enabled boolean [not null, default: true]
+  email_enabled boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz
+
+  indexes {
+    user_id [name: 'idx_notification_preferences_user']
+    (user_id, category) [unique, name: 'uq_notification_preferences_user_category']
+  }
+}

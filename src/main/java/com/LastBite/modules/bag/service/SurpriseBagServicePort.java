@@ -17,7 +17,11 @@ public interface SurpriseBagServicePort {
 
     SurpriseBagResponse create(UUID ownerId, CreateSurpriseBagRequest request);
 
+    SurpriseBagResponse create(UUID actorId, UUID storeId, CreateSurpriseBagRequest request);
+
     PageResponse<SurpriseBagResponse> list(UUID ownerId, Pageable pageable);
+
+    PageResponse<SurpriseBagResponse> list(UUID actorId, UUID storeId, Pageable pageable);
 
     SurpriseBagResponse update(UUID ownerId, UUID bagId, UpdateSurpriseBagRequest request);
 

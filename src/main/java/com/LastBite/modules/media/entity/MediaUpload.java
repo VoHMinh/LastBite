@@ -16,6 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -63,8 +64,12 @@ public class MediaUpload extends BaseEntity {
     @Column(name = "object_key", nullable = false, unique = true, length = 700)
     private String objectKey;
 
-    @Column(name = "public_url", nullable = false, length = 1000)
+    @Column(name = "public_url", length = 1000)
     private String publicUrl;
+
+    @Column(name = "is_private", nullable = false)
+    @Builder.Default
+    private boolean privateObject = false;
 
     @Column(name = "content_type", nullable = false, length = 100)
     private String contentType;

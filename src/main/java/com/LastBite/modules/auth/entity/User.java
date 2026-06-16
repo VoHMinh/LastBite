@@ -1,6 +1,7 @@
 package com.LastBite.modules.auth.entity;
 
 import com.LastBite.common.entity.BaseEntity;
+import com.LastBite.modules.auth.enums.AccountType;
 import com.LastBite.modules.auth.enums.AuthProvider;
 import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.enums.UserStatus;
@@ -8,12 +9,10 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-/**
- * Danh tính người dùng cốt lõi.
- * <p>
- * {@code passwordHash} có thể null để hỗ trợ người dùng OAuth (Google/Zalo)
- * đăng ký không cần mật khẩu.
- */
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -23,10 +22,12 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class User extends BaseEntity {
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(unique = true, length = 255)
     private String email;
 
-    /** Có thể null — người dùng OAuth không có mật khẩu local. */
+    @Column(unique = true, length = 80)
+    private String username;
+
     @Column(name = "password_hash", length = 255)
     private String passwordHash;
 
@@ -40,9 +41,16 @@ public class User extends BaseEntity {
     private String avatarUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
+    @Column(name = "account_type", nullable = false, length = 30)
     @Builder.Default
-    private UserRole role = UserRole.CUSTOMER;
+    private AccountType accountType = AccountType.PLATFORM;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @Builder.Default
+    private Set<Role> roles = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -62,6 +70,18 @@ public class User extends BaseEntity {
     @Builder.Default
     private boolean phoneVerified = false;
 
+    @Column(name = "must_change_password", nullable = false)
+    @Builder.Default
+    private boolean mustChangePassword = false;
+
     @Column(name = "last_login_at")
-    private java.time.Instant lastLoginAt;
+    private Instant lastLoginAt;
+
+    public boolean hasRole(UserRole role) {
+        return roles.stream().anyMatch(item -> item.getCode() == role);
+    }
+
+    public void addRole(Role role) {
+        roles.add(role);
+    }
 }

@@ -2,6 +2,9 @@ package com.LastBite.modules.order.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
+import com.LastBite.common.util.HashUtil;
+import com.LastBite.modules.audit.enums.AuditActorType;
+import com.LastBite.modules.audit.service.OrderStatusHistoryService;
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.bag.entity.BagDailyStock;
@@ -17,11 +20,17 @@ import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.order.dto.request.CreateOrderRequest;
 import com.LastBite.modules.order.dto.response.OrderResponse;
 import com.LastBite.modules.order.entity.Order;
+import com.LastBite.modules.order.enums.OrderRefundStatus;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.repository.OrderRepository;
 import com.LastBite.modules.order.service.OrderServicePort;
+import com.LastBite.modules.payment.entity.Payment;
+import com.LastBite.modules.payment.service.PaymentService;
+import com.LastBite.modules.refund.enums.RefundReason;
+import com.LastBite.modules.refund.service.RefundService;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
+import com.LastBite.modules.store.service.StoreCalendarService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -47,15 +56,21 @@ public class OrderService implements OrderServicePort {
     private final UserRepository userRepository;
     private final BagPricingService pricingService;
     private final NotificationServicePort notificationService;
+    private final PaymentService paymentService;
+    private final RefundService refundService;
+    private final StoreCalendarService storeCalendarService;
+    private final OrderStatusHistoryService statusHistoryService;
     private final Clock clock;
 
+    @Override
     @Transactional
     @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public OrderResponse create(UUID userId, CreateOrderRequest request) {
         String idempotencyKey = request.getIdempotencyKey().trim();
         var existingOrder = orderRepository.findByUser_IdAndIdempotencyKey(userId, idempotencyKey);
         if (existingOrder.isPresent()) {
-            return toResponse(existingOrder.get());
+            Order order = existingOrder.get();
+            return toResponse(order, paymentService.findByOrderId(order.getId()).orElse(null), null);
         }
 
         User user = userRepository.findById(userId)
@@ -63,7 +78,7 @@ public class OrderService implements OrderServicePort {
         LocalDate today = LocalDate.now(clock);
         LocalTime now = LocalTime.now(clock);
         BagDailyStock stock = stockRepository.findByBagIdAndDateForUpdate(request.getBagId(), today)
-                .orElseThrow(() -> new ApiException(ErrorCode.STOCK_NOT_FOUND, "Túi chưa mở bán hôm nay"));
+                .orElseThrow(() -> new ApiException(ErrorCode.STOCK_NOT_FOUND, "Tui chua mo ban hom nay"));
         SurpriseBag bag = stock.getBag();
 
         validateOrderable(stock, bag, request.getQuantity(), now);
@@ -71,6 +86,10 @@ public class OrderService implements OrderServicePort {
         var price = pricingService.currentPrice(bag, today);
         BigDecimal unitPrice = price.currentSalePrice();
         BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(request.getQuantity()));
+        Instant reservedUntil = Instant.now(clock).plus(RESERVATION_TTL);
+        String pickupCode = generatePickupCode();
+        String pickupQrToken = generatePickupQrToken();
+
         Order order = Order.builder()
                 .orderNumber(generateOrderNumber())
                 .user(user)
@@ -84,11 +103,15 @@ public class OrderService implements OrderServicePort {
                 .discountAmount(BigDecimal.ZERO)
                 .finalAmount(subtotal)
                 .status(OrderStatus.PENDING_PAYMENT)
-                .pickupCode(generatePickupCode())
+                .refundStatus(OrderRefundStatus.NONE)
+                .pickupCode(pickupCode)
+                .pickupCodeHash(HashUtil.sha256(pickupCode))
+                .pickupQrTokenHash(HashUtil.sha256(pickupQrToken))
                 .pickupDate(today)
                 .pickupStartTime(bag.getPickupStartTime())
                 .pickupEndTime(bag.getPickupEndTime())
-                .reservedUntil(Instant.now(clock).plus(RESERVATION_TTL))
+                .reservedUntil(reservedUntil)
+                .paymentExpiresAt(reservedUntil)
                 .idempotencyKey(idempotencyKey)
                 .build();
 
@@ -101,31 +124,80 @@ public class OrderService implements OrderServicePort {
         order = orderRepository.save(order);
         stockRepository.save(stock);
         writeReserveAudit(bag, stock, user, order.getId(), request.getQuantity(), availableBefore, stock.available());
+        statusHistoryService.record(order, null, OrderStatus.PENDING_PAYMENT, user, AuditActorType.CUSTOMER,
+                "Customer reserved surprise bag", null);
+        Payment payment = paymentService.createPaymentForOrder(order);
         notificationService.notifyOrderReserved(order);
 
-        return toResponse(order);
+        return toResponse(order, payment, pickupQrToken);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OrderResponse get(UUID userId, UUID orderId) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
+        return toResponse(order, paymentService.findByOrderId(orderId).orElse(null), null);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    public OrderResponse cancel(UUID userId, UUID orderId) {
+        Order order = orderRepository.findByIdForUpdate(orderId)
+                .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
+        if (!order.getUser().getId().equals(userId)) {
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.EXPIRED) {
+            return toResponse(order, paymentService.findByOrderId(orderId).orElse(null), null);
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT && order.getStatus() != OrderStatus.PAID) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Don hang khong the huy o trang thai hien tai");
+        }
+        if (!LocalTime.now(clock).isBefore(order.getPickupStartTime().minusHours(2))) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Chi co the huy truoc gio pickup it nhat 2 tieng");
+        }
+
+        OrderStatus previous = order.getStatus();
+        Payment payment = paymentService.findByOrderId(orderId).orElse(null);
+        if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
+            releaseReservedStock(order, "Khach huy truoc khi thanh toan");
+        } else {
+            refundService.createAutoRefund(order, payment, RefundReason.CUSTOMER_COMPLAINT,
+                    "Customer cancelled before pickup window");
+        }
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelledAt(Instant.now(clock));
+        statusHistoryService.record(order, previous, OrderStatus.CANCELLED, order.getUser(), AuditActorType.CUSTOMER,
+                "Customer cancelled order", null);
+        return toResponse(order, payment, null);
     }
 
     private void validateOrderable(BagDailyStock stock, SurpriseBag bag, int quantity, LocalTime now) {
         if (quantity > bag.getMaxPerOrder()) {
             throw new ApiException(ErrorCode.INVALID_INPUT,
-                    "Số lượng đặt vượt quá giới hạn tối đa của túi này");
+                    "So luong dat vuot qua gioi han toi da cua tui nay");
         }
         if (bag.getStatus() != BagStatus.ACTIVE) {
-            throw new ApiException(ErrorCode.BAG_NOT_FOUND, "Túi hiện không mở bán");
+            throw new ApiException(ErrorCode.BAG_NOT_FOUND, "Tui hien khong mo ban");
         }
         if (stock.getStore().getStatus() != StoreStatus.ACTIVE
                 || stock.getStore().getVerificationStatus() != VerificationStatus.VERIFIED) {
-            throw new ApiException(ErrorCode.FORBIDDEN, "Cửa hàng hiện chưa sẵn sàng nhận đơn");
+            throw new ApiException(ErrorCode.FORBIDDEN, "Cua hang hien chua san sang nhan don");
         }
         if (stock.getStatus() != DailyStockStatus.ACTIVE) {
-            throw new ApiException(ErrorCode.STOCK_CONFLICT, "Túi hôm nay đã hết hoặc không còn mở bán");
+            throw new ApiException(ErrorCode.STOCK_CONFLICT, "Tui hom nay da het hoac khong con mo ban");
+        }
+        if (!storeCalendarService.supportsPickupWindow(stock.getStore(), stock.getDate(),
+                bag.getPickupStartTime(), bag.getPickupEndTime())) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Cua hang dong cua hoac co gio dac biet khong phu hop");
         }
         if (!now.isBefore(bag.getPickupEndTime())) {
-            throw new ApiException(ErrorCode.INVALID_INPUT, "Đã quá giờ pickup của túi hôm nay");
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Da qua gio pickup cua tui hom nay");
         }
         if (stock.available() < quantity) {
-            throw new ApiException(ErrorCode.STOCK_CONFLICT, "Số lượng túi còn lại không đủ");
+            throw new ApiException(ErrorCode.STOCK_CONFLICT, "So luong tui con lai khong du");
         }
     }
 
@@ -139,8 +211,30 @@ public class OrderService implements OrderServicePort {
                 .delta(-quantity)
                 .quantityBefore(availableBefore)
                 .quantityAfter(availableAfter)
-                .reason("Khách đặt giữ túi")
+                .reason("Khach dat giu tui")
                 .orderId(orderId)
+                .build());
+    }
+
+    private void releaseReservedStock(Order order, String reason) {
+        BagDailyStock stock = stockRepository.findByBagIdAndDateForUpdate(order.getBag().getId(), order.getPickupDate())
+                .orElseThrow(() -> new ApiException(ErrorCode.STOCK_NOT_FOUND));
+        int availableBefore = stock.available();
+        stock.setReserved(Math.max(0, stock.getReserved() - order.getQuantity()));
+        if (stock.getStatus() == DailyStockStatus.SOLD_OUT && stock.available() > 0) {
+            stock.setStatus(DailyStockStatus.ACTIVE);
+        }
+        stockRepository.save(stock);
+        auditLogRepository.save(StockAuditLog.builder()
+                .bag(order.getBag())
+                .dailyStock(stock)
+                .actor(order.getUser())
+                .action(StockAuditAction.RESERVE_CANCEL)
+                .delta(order.getQuantity())
+                .quantityBefore(availableBefore)
+                .quantityAfter(stock.available())
+                .reason(reason)
+                .orderId(order.getId())
                 .build());
     }
 
@@ -152,7 +246,11 @@ public class OrderService implements OrderServicePort {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
     }
 
-    private OrderResponse toResponse(Order order) {
+    private String generatePickupQrToken() {
+        return "pk_" + UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private OrderResponse toResponse(Order order, Payment payment, String pickupQrToken) {
         return OrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
@@ -169,12 +267,25 @@ public class OrderService implements OrderServicePort {
                 .discountAmount(order.getDiscountAmount())
                 .finalAmount(order.getFinalAmount())
                 .status(order.getStatus())
+                .refundStatus(order.getRefundStatus())
                 .pickupCode(order.getPickupCode())
+                .pickupQrToken(pickupQrToken)
                 .pickupDate(order.getPickupDate())
                 .pickupStartTime(order.getPickupStartTime())
                 .pickupEndTime(order.getPickupEndTime())
                 .reservedUntil(order.getReservedUntil())
+                .paymentExpiresAt(order.getPaymentExpiresAt())
+                .paidAt(order.getPaidAt())
+                .pickedUpAt(order.getPickedUpAt())
+                .cancelledAt(order.getCancelledAt())
+                .expiredAt(order.getExpiredAt())
                 .idempotencyKey(order.getIdempotencyKey())
+                .paymentId(payment == null ? null : payment.getId())
+                .paymentStatus(payment == null ? null : payment.getStatus())
+                .paymentProvider(payment == null ? null : payment.getProvider().name())
+                .paymentOrderCode(payment == null ? null : payment.getProviderOrderCode())
+                .checkoutUrl(payment == null ? null : payment.getCheckoutUrl())
+                .paymentQrCode(payment == null ? null : payment.getQrCode())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();

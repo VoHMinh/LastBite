@@ -36,6 +36,8 @@ public class CreateStoreRequest {
     private Double lat;
     private Double lng;
 
+    private String pickupInstructions;
+
     @Size(max = 500)
     private String coverImageUrl;
 

@@ -4,6 +4,7 @@ package com.LastBite.modules.store.enums;
  * Trạng thái vận hành của cửa hàng.
  */
 public enum StoreStatus {
+    DRAFT,
     /** Cửa hàng đang mở và hoạt động. */
     ACTIVE,
     /** Chủ cửa hàng tạm ngưng hoạt động. */

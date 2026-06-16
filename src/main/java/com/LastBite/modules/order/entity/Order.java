@@ -4,6 +4,7 @@ import com.LastBite.common.entity.BaseEntity;
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.bag.entity.BagDailyStock;
 import com.LastBite.modules.bag.entity.SurpriseBag;
+import com.LastBite.modules.order.enums.OrderRefundStatus;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.store.entity.Store;
 import jakarta.persistence.*;
@@ -89,6 +90,32 @@ public class Order extends BaseEntity {
 
     @Column(name = "reserved_until", nullable = false)
     private Instant reservedUntil;
+
+    @Column(name = "payment_expires_at")
+    private Instant paymentExpiresAt;
+
+    @Column(name = "paid_at")
+    private Instant paidAt;
+
+    @Column(name = "picked_up_at")
+    private Instant pickedUpAt;
+
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
+    @Column(name = "expired_at")
+    private Instant expiredAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "refund_status", nullable = false, length = 30)
+    @Builder.Default
+    private OrderRefundStatus refundStatus = OrderRefundStatus.NONE;
+
+    @Column(name = "pickup_qr_token_hash", length = 128)
+    private String pickupQrTokenHash;
+
+    @Column(name = "pickup_code_hash", length = 128)
+    private String pickupCodeHash;
 
     @Column(name = "idempotency_key", nullable = false, unique = true, length = 100)
     private String idempotencyKey;

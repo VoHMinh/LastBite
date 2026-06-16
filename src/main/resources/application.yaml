@@ -95,6 +95,16 @@ app:
     enabled: ${APP_FCM_ENABLED:false}
     credentials-path: ${APP_FCM_CREDENTIALS_PATH:}
     credentials-base64: ${APP_FCM_CREDENTIALS_BASE64:}
+  payments:
+    gateway: ${APP_PAYMENTS_GATEWAY:fake}
+    return-url: ${APP_PAYMENTS_RETURN_URL:http://localhost:3000/orders/payment-return}
+    cancel-url: ${APP_PAYMENTS_CANCEL_URL:http://localhost:3000/orders/payment-cancel}
+    reservation-ttl-minutes: ${APP_PAYMENTS_RESERVATION_TTL_MINUTES:10}
+    payos:
+      base-url: ${PAYOS_BASE_URL:https://api-merchant.payos.vn}
+      client-id: ${PAYOS_CLIENT_ID:}
+      api-key: ${PAYOS_API_KEY:}
+      checksum-key: ${PAYOS_CHECKSUM_KEY:}
 
 # ── Logging ───────────────────────────────────────
 logging:
