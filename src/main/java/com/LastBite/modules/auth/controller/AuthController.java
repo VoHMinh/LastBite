@@ -42,7 +42,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Xác thực", description = "Đăng ký, đăng nhập, xác minh email, Google OAuth và quản lý token")
+@Tag(name = "Auth", description = "Đăng ký, đăng nhập, xác minh email, Google OAuth và quản lý token")
 public class AuthController {
 
     private static final String REFRESH_COOKIE_NAME = "refresh_token";
@@ -59,7 +59,8 @@ public class AuthController {
     private String refreshCookieSameSite;
 
     @PostMapping("/register")
-    @Operation(summary = "Đăng ký tài khoản khách hàng và gửi mã OTP xác minh email")
+    @Operation(summary = "Đăng ký tài khoản khách hàng và gửi mã OTP xác minh email",
+            operationId = "registerCustomer")
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest request) {
         authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -67,7 +68,8 @@ public class AuthController {
     }
 
     @PostMapping("/register-merchant")
-    @Operation(summary = "Đăng ký tài khoản chủ cửa hàng, chưa tạo hồ sơ cửa hàng")
+    @Operation(summary = "Đăng ký tài khoản chủ cửa hàng, chưa tạo hồ sơ cửa hàng",
+            operationId = "registerMerchant")
     public ResponseEntity<ApiResponse<Void>> registerMerchant(@Valid @RequestBody RegisterRequest request) {
         authService.registerMerchant(request);
         return ResponseEntity.status(HttpStatus.CREATED)

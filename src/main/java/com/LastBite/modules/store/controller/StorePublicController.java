@@ -26,7 +26,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/stores")
 @RequiredArgsConstructor
-@Tag(name = "Cửa hàng (Công khai)", description = "Tra cứu cửa hàng công khai")
+@Tag(name = "Public Stores", description = "Tra cứu cửa hàng công khai")
 public class StorePublicController {
 
     private final StoreQueryServicePort storeQueryService;

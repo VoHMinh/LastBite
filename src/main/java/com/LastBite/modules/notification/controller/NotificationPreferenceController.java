@@ -4,6 +4,8 @@ import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.notification.dto.request.UpdateNotificationPreferenceRequest;
 import com.LastBite.modules.notification.dto.response.NotificationPreferenceResponse;
 import com.LastBite.modules.notification.service.NotificationPreferenceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/notifications/preferences")
 @RequiredArgsConstructor
+@Tag(name = "Notification Preferences", description = "Quản lý tùy chọn thông báo của người dùng")
 public class NotificationPreferenceController {
 
     private final NotificationPreferenceService preferenceService;

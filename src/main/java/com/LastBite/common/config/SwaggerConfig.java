@@ -41,10 +41,10 @@ public class SwaggerConfig {
                 .components(new Components()
                         .addSecuritySchemes(SECURITY_SCHEME,
                                 new SecurityScheme()
-                                        .name(SECURITY_SCHEME)
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .description("Paste your JWT access token here")));
+                                        .description("Paste your JWT access token here")
+                                        .name(null)));
     }
 }
