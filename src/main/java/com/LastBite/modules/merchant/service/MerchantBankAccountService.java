@@ -5,7 +5,7 @@ import com.LastBite.common.security.SensitiveDataCipher;
 import com.LastBite.modules.merchant.dto.request.BankAccountRequest;
 import com.LastBite.modules.merchant.dto.response.BankAccountResponse;
 import com.LastBite.modules.merchant.entity.MerchantBankAccount;
-import com.LastBite.modules.merchant.enums.ReviewStatus;
+import com.LastBite.modules.merchant.enums.BankAccountVerificationStatus;
 import com.LastBite.modules.merchant.repository.*;
 import com.LastBite.modules.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ public class MerchantBankAccountService {
                 .accountNumberEncrypted(cipher.encrypt(number))
                 .accountNumberLast4(number.substring(number.length() - 4))
                 .defaultAccount(request.isDefaultAccount())
-                .verificationStatus(ReviewStatus.PENDING_REVIEW)
+                .verificationStatus(BankAccountVerificationStatus.PENDING_REVIEW)
                 .build();
         return response(bankRepository.save(account));
     }

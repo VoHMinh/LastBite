@@ -1,7 +1,7 @@
 package com.LastBite.modules.merchant.entity;
 
 import com.LastBite.common.entity.BaseEntity;
-import com.LastBite.modules.merchant.enums.ReviewStatus;
+import com.LastBite.modules.merchant.enums.BankAccountVerificationStatus;
 import com.LastBite.modules.store.entity.Store;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,7 +35,7 @@ public class MerchantBankAccount extends BaseEntity {
     private boolean defaultAccount;
     @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", nullable = false, length = 30)
-    private ReviewStatus verificationStatus;
+    private BankAccountVerificationStatus verificationStatus;
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
 }

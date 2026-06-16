@@ -40,4 +40,19 @@ public class SensitiveDataCipher {
             throw new IllegalStateException("Cannot encrypt sensitive data", e);
         }
     }
+
+    public String decrypt(String ciphertext) {
+        try {
+            byte[] packed = Base64.getDecoder().decode(ciphertext);
+            byte[] iv = new byte[12];
+            byte[] encrypted = new byte[packed.length - iv.length];
+            System.arraycopy(packed, 0, iv, 0, iv.length);
+            System.arraycopy(packed, iv.length, encrypted, 0, encrypted.length);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(128, iv));
+            return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+        } catch (GeneralSecurityException | IllegalArgumentException e) {
+            throw new IllegalStateException("Cannot decrypt sensitive data", e);
+        }
+    }
 }

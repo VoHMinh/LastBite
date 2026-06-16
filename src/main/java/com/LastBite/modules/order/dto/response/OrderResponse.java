@@ -1,6 +1,8 @@
 package com.LastBite.modules.order.dto.response;
 
 import com.LastBite.modules.order.enums.OrderStatus;
+import com.LastBite.modules.order.enums.OrderRefundStatus;
+import com.LastBite.modules.payment.enums.PaymentStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -28,12 +30,25 @@ public class OrderResponse {
     private BigDecimal discountAmount;
     private BigDecimal finalAmount;
     private OrderStatus status;
+    private OrderRefundStatus refundStatus;
     private String pickupCode;
+    private String pickupQrToken;
     private LocalDate pickupDate;
     private LocalTime pickupStartTime;
     private LocalTime pickupEndTime;
     private Instant reservedUntil;
+    private Instant paymentExpiresAt;
+    private Instant paidAt;
+    private Instant pickedUpAt;
+    private Instant cancelledAt;
+    private Instant expiredAt;
     private String idempotencyKey;
+    private UUID paymentId;
+    private PaymentStatus paymentStatus;
+    private String paymentProvider;
+    private Long paymentOrderCode;
+    private String checkoutUrl;
+    private String paymentQrCode;
     private Instant createdAt;
     private Instant updatedAt;
 }

@@ -20,18 +20,35 @@ import java.util.UUID;
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('CUSTOMER')")
-@Tag(name = "Orders", description = "Đặt giữ túi và snapshot giá tại thời điểm đặt")
+@Tag(name = "Orders", description = "Order reservation, payment status and customer cancellation")
 public class OrderController {
 
     private final OrderServicePort orderService;
 
     @PostMapping
-    @Operation(summary = "Đặt giữ túi hôm nay")
+    @Operation(summary = "Reserve today's surprise bag and create payment checkout")
     public ResponseEntity<ApiResponse<OrderResponse>> create(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateOrderRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(orderService.create(extractUserId(jwt), request),
-                "Đã giữ túi, vui lòng thanh toán trước khi hết hạn"));
+                "Da giu tui, vui long thanh toan truoc khi het han"));
+    }
+
+    @GetMapping("/{orderId}")
+    @Operation(summary = "Get my order detail")
+    public ResponseEntity<ApiResponse<OrderResponse>> get(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID orderId) {
+        return ResponseEntity.ok(ApiResponse.ok(orderService.get(extractUserId(jwt), orderId)));
+    }
+
+    @PostMapping("/{orderId}/cancel")
+    @Operation(summary = "Cancel my order")
+    public ResponseEntity<ApiResponse<OrderResponse>> cancel(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID orderId) {
+        return ResponseEntity.ok(ApiResponse.ok(orderService.cancel(extractUserId(jwt), orderId),
+                "Da huy don hang"));
     }
 
     private UUID extractUserId(Jwt jwt) {
