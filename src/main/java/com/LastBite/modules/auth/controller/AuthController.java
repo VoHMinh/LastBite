@@ -3,6 +3,7 @@ package com.LastBite.modules.auth.controller;
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.common.response.ApiResponse;
+import com.LastBite.common.service.EmailService;
 import com.LastBite.modules.auth.dto.request.GoogleAuthRequest;
 import com.LastBite.modules.auth.dto.request.LoginRequest;
 import com.LastBite.modules.auth.dto.request.StoreLoginRequest;
@@ -41,7 +42,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Xác thực", description = "Đăng ký, đăng nhập, xác minh email, Google OAuth và quản lý token")
+@Tag(name = "Auth", description = "Đăng ký, đăng nhập, xác minh email, Google OAuth và quản lý token")
 public class AuthController {
 
     private static final String REFRESH_COOKIE_NAME = "refresh_token";
@@ -49,6 +50,7 @@ public class AuthController {
     private final AuthServicePort authService;
     private final GoogleAuthServicePort googleAuthService;
     private final JwtServicePort jwtService;
+    private final EmailService emailService;
 
     @Value("${app.auth.refresh-cookie-secure:false}")
     private boolean refreshCookieSecure;
@@ -57,15 +59,17 @@ public class AuthController {
     private String refreshCookieSameSite;
 
     @PostMapping("/register")
-    @Operation(summary = "Đăng ký tài khoản khách hàng và gửi link xác minh email")
+    @Operation(summary = "Đăng ký tài khoản khách hàng và gửi mã OTP xác minh email",
+            operationId = "registerCustomer")
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest request) {
         authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(null, "Đăng ký thành công - vui lòng kiểm tra email để xác minh tài khoản"));
+                .body(ApiResponse.ok(null, "Đăng ký thành công - vui lòng kiểm tra email để nhận mã OTP"));
     }
 
     @PostMapping("/register-merchant")
-    @Operation(summary = "Đăng ký tài khoản chủ cửa hàng, chưa tạo hồ sơ cửa hàng")
+    @Operation(summary = "Đăng ký tài khoản chủ cửa hàng, chưa tạo hồ sơ cửa hàng",
+            operationId = "registerMerchant")
     public ResponseEntity<ApiResponse<Void>> registerMerchant(@Valid @RequestBody RegisterRequest request) {
         authService.registerMerchant(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -73,11 +77,11 @@ public class AuthController {
     }
 
     @PostMapping("/register-partner")
-    @Operation(summary = "Đăng ký tài khoản đối tác, tạo cửa hàng và gửi link xác minh email")
+    @Operation(summary = "Đăng ký tài khoản đối tác, tạo cửa hàng và gửi mã OTP xác minh email")
     public ResponseEntity<ApiResponse<Void>> registerPartner(@Valid @RequestBody RegisterPartnerRequest request) {
         authService.registerPartner(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(null, "Đăng ký đối tác thành công - vui lòng kiểm tra email để xác minh tài khoản"));
+                .body(ApiResponse.ok(null, "Đăng ký đối tác thành công - vui lòng kiểm tra email để nhận mã OTP"));
     }
 
     @PostMapping("/verify-email")
@@ -166,6 +170,14 @@ public class AuthController {
     @Operation(summary = "Lấy thông tin người dùng hiện tại")
     public ResponseEntity<ApiResponse<UserResponse>> me(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(ApiResponse.ok(authService.getCurrentUser(extractUserId(jwt))));
+    }
+
+    @GetMapping("/test-email")
+    @Operation(summary = "Test gửi email")
+    public ResponseEntity<ApiResponse<String>> testEmail(@RequestParam String to) {
+        emailService.sendVerificationLinkEmail(to, "Test User",
+                "http://localhost:3000/verify?token=test-token-12345");
+        return ResponseEntity.ok(ApiResponse.ok("Email sent (check async logs)"));
     }
 
     private ResponseEntity<ApiResponse<AuthResponse>> authResponse(AuthResponse auth, String message) {

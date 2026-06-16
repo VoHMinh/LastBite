@@ -9,6 +9,8 @@ import com.LastBite.modules.notification.dto.response.NotificationStatsResponse;
 import com.LastBite.modules.notification.service.NotificationInboxService;
 import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.notification.service.PushNotificationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
+@Tag(name = "Notifications", description = "Hộp thư và quản lý thông báo")
 public class NotificationController {
 
     private final NotificationInboxService inboxService;

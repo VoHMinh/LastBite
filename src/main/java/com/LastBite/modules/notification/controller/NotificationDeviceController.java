@@ -4,6 +4,8 @@ import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.notification.dto.request.RegisterNotificationDeviceRequest;
 import com.LastBite.modules.notification.dto.response.NotificationDeviceResponse;
 import com.LastBite.modules.notification.service.NotificationDeviceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/notifications/devices")
 @RequiredArgsConstructor
+@Tag(name = "Notification Devices", description = "Đăng ký và quản lý thiết bị nhận thông báo push")
 public class NotificationDeviceController {
 
     private final NotificationDeviceService deviceService;

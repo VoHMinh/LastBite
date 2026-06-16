@@ -33,7 +33,7 @@ public class EmailService {
             helper.setTo(toEmail);
             helper.setSubject("LastBite — Mã xác minh email của bạn: " + otpCode);
             helper.setText(buildOtpHtml(fullName, otpCode), true);
-
+            helper.setFrom("The Last Bite <thelastbite915@gmail.com>");
             mailSender.send(message);
             log.info("Đã gửi email OTP tới {}", toEmail);
         } catch (Exception e) {
@@ -54,7 +54,7 @@ public class EmailService {
             helper.setTo(toEmail);
             helper.setSubject("LastBite — Xác minh email của bạn");
             helper.setText(buildVerificationLinkHtml(fullName, verificationLink), true);
-
+            helper.setFrom("The Last Bite <thelastbite915@gmail.com>");
             mailSender.send(message);
             log.info("Đã gửi email link xác minh tới {}", toEmail);
         } catch (Exception e) {

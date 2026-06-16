@@ -21,7 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/bags")
 @RequiredArgsConstructor
-@Tag(name = "Túi bất ngờ (Công khai)", description = "Discovery và xem chi tiết túi hôm nay")
+@Tag(name = "Public Bags", description = "Discovery và xem chi tiết túi hôm nay")
 public class BagPublicController {
 
     private final BagDiscoveryServicePort discoveryService;

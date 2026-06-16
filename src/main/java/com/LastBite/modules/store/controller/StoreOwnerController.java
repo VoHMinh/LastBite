@@ -30,7 +30,7 @@ import java.util.UUID;
 @RequestMapping("/api/v1/store-owner/store")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('MERCHANT_OWNER')")
-@Tag(name = "Chủ cửa hàng", description = "Quản lý cửa hàng (dành cho chủ cửa hàng đã đăng ký)")
+@Tag(name = "Store Owner", description = "Quản lý cửa hàng (dành cho chủ cửa hàng đã đăng ký)")
 public class StoreOwnerController {
 
     private final StoreServicePort storeService;
