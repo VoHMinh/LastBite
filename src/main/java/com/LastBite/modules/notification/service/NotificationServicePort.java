@@ -9,6 +9,12 @@ public interface NotificationServicePort {
 
     void notifyOrderReserved(Order order);
 
+    void notifyOrderReadyForPickup(Order order);
+
+    void notifyOrderCancelled(Order order);
+
+    void notifyOrderRefunded(Order order);
+
     void notifyPaymentExpiring(Order order);
 
     void notifyPickupReminder(Order order, int minutesBefore);

@@ -31,7 +31,7 @@ public class PayOsPayoutGatewayAdapter implements PayoutGatewayPort {
         payload.put("description", command.description());
         payload.put("toBin", command.toBin());
         payload.put("toAccountNumber", command.toAccountNumber());
-        payload.put("category", List.of("merchant_settlement"));
+        payload.put("category", List.of(command.category() == null ? "merchant_settlement" : command.category()));
 
         Map<String, Object> response = restClient().post()
                 .uri("/v1/payouts")

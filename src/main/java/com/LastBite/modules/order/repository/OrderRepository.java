@@ -1,8 +1,12 @@
 package com.LastBite.modules.order.repository;
 
 import com.LastBite.modules.order.entity.Order;
+import com.LastBite.modules.order.enums.OrderRefundStatus;
 import com.LastBite.modules.order.enums.OrderStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -32,6 +36,38 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @Query("SELECT o FROM Order o WHERE o.id = :orderId AND o.user.id = :userId")
     Optional<Order> findByIdAndUserId(@Param("orderId") UUID orderId, @Param("userId") UUID userId);
+
+    @EntityGraph(attributePaths = {"user", "store", "bag", "dailyStock"})
+    @Query("""
+        SELECT o FROM Order o
+        WHERE o.user.id = :userId
+          AND (:status IS NULL OR o.status = :status)
+          AND (:refundStatus IS NULL OR o.refundStatus = :refundStatus)
+          AND (:pickupDateFrom IS NULL OR o.pickupDate >= :pickupDateFrom)
+          AND (:pickupDateTo IS NULL OR o.pickupDate <= :pickupDateTo)
+    """)
+    Page<Order> searchCustomerOrders(@Param("userId") UUID userId,
+                                     @Param("status") OrderStatus status,
+                                     @Param("refundStatus") OrderRefundStatus refundStatus,
+                                     @Param("pickupDateFrom") LocalDate pickupDateFrom,
+                                     @Param("pickupDateTo") LocalDate pickupDateTo,
+                                     Pageable pageable);
+
+    @EntityGraph(attributePaths = {"user", "store", "bag", "dailyStock"})
+    @Query("""
+        SELECT o FROM Order o
+        WHERE o.store.id = :storeId
+          AND (:pickupDate IS NULL OR o.pickupDate = :pickupDate)
+          AND (:status IS NULL OR o.status = :status)
+    """)
+    Page<Order> searchStoreOrders(@Param("storeId") UUID storeId,
+                                  @Param("pickupDate") LocalDate pickupDate,
+                                  @Param("status") OrderStatus status,
+                                  Pageable pageable);
+
+    @EntityGraph(attributePaths = {"user", "store", "bag", "dailyStock"})
+    @Query("SELECT o FROM Order o WHERE o.id = :orderId AND o.store.id = :storeId")
+    Optional<Order> findByIdAndStoreId(@Param("orderId") UUID orderId, @Param("storeId") UUID storeId);
 
     @Query("""
         SELECT o FROM Order o

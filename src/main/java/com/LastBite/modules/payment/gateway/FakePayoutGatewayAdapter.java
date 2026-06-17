@@ -13,7 +13,7 @@ public class FakePayoutGatewayAdapter implements PayoutGatewayPort {
         return new PayoutResult(
                 id,
                 "fake_txn_" + command.referenceId(),
-                "PROCESSING",
+                "SUCCEEDED",
                 "{\"code\":\"00\",\"desc\":\"fake\",\"data\":{\"id\":\"" + id + "\"}}"
         );
     }

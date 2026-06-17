@@ -69,4 +69,19 @@ public class RefundRequest extends BaseEntity {
     @Column(name = "auto_created", nullable = false)
     @Builder.Default
     private boolean autoCreated = false;
+
+    @Column(name = "refund_bank_code", length = 30)
+    private String refundBankCode;
+
+    @Column(name = "refund_bank_name", length = 150)
+    private String refundBankName;
+
+    @Column(name = "refund_account_holder_name", length = 255)
+    private String refundAccountHolderName;
+
+    @Column(name = "refund_account_number_encrypted", columnDefinition = "TEXT")
+    private String refundAccountNumberEncrypted;
+
+    @Column(name = "refund_account_number_last4", length = 4)
+    private String refundAccountNumberLast4;
 }
