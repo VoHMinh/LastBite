@@ -15,6 +15,8 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
 
     boolean existsByOrderIdAndEntryType(UUID orderId, LedgerEntryType entryType);
 
+    List<LedgerEntry> findAllByOrderIdAndEntryType(UUID orderId, LedgerEntryType entryType);
+
     @Query("""
         SELECT e FROM LedgerEntry e
         JOIN FETCH e.account a

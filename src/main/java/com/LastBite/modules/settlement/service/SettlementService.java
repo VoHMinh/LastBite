@@ -192,7 +192,8 @@ public class SettlementService {
                     "LastBite settlement " + settlement.getId().toString().substring(0, 8),
                     bankAccount.getBankCode(),
                     accountNumber,
-                    payout.getIdempotencyKey()));
+                    payout.getIdempotencyKey(),
+                    "merchant_settlement"));
             payout.setProviderPayoutId(result.providerPayoutId());
             payout.setProviderTransactionId(result.providerTransactionId());
             payout.setStatus(isPaidState(result.state()) ? PayoutStatus.PAID : PayoutStatus.PROCESSING);

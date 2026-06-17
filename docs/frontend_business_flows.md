@@ -2,7 +2,7 @@
 
 Tài liệu này gom các nghiệp vụ đang có trong codebase hiện tại để FE dùng làm bản đồ tích hợp. Phạm vi rà soát gồm `src/main/java/com/LastBite/modules`, các controller, service, DTO request/response, enum trạng thái và các scheduled job.
 
-Tài liệu chỉ mô tả tính năng đã có trong code hiện tại. Những phần chưa có endpoint hoặc chưa có worker xử lý thật được ghi riêng ở cuối để FE không tích hợp nhầm.
+Tài liệu chỉ mô tả tính năng đã có trong code hiện tại. Những phần chưa có trong code hoặc còn cần xử lý ngoài code được ghi riêng ở cuối để FE không tích hợp nhầm.
 
 ## 0. Quy Ước Chung
 
@@ -292,7 +292,16 @@ Bank account hiện có trạng thái riêng:
 - `APPROVED`
 - `REJECTED`
 
-Khi merchant tạo bank account, backend set `PENDING_REVIEW`. Hiện chưa thấy endpoint admin approve/reject bank account trong controller hiện tại, dù settlement payout yêu cầu bank account `APPROVED`.
+Khi merchant tạo bank account, backend set `PENDING_REVIEW`. Admin duyệt qua:
+
+| Method | Endpoint | Role | Mục đích |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/admin/bank-accounts?status=&businessProfileId=&storeId=&page=&size=` | `ADMIN` | List/filter bank account |
+| `GET` | `/api/v1/admin/bank-accounts/{bankAccountId}` | `ADMIN` | Xem bank account đã mask số tài khoản |
+| `PATCH` | `/api/v1/admin/bank-accounts/{bankAccountId}/approve` | `ADMIN` | Duyệt bank account |
+| `PATCH` | `/api/v1/admin/bank-accounts/{bankAccountId}/reject` | `ADMIN` | Từ chối bank account với `rejectionReason` |
+
+Settlement payout chỉ lấy bank account `APPROVED`. FE merchant nên hiển thị rõ trạng thái bank account để merchant biết vì sao chưa rút tiền được.
 
 ## 5. Store Member, Staff Login, Workspace
 
@@ -474,8 +483,15 @@ Nếu bag bật dynamic pricing, giá giảm theo thời gian từ đầu ngày 
 | Method | Endpoint | Role/Auth | Mục đích |
 | --- | --- | --- | --- |
 | `POST` | `/api/v1/orders` | `CUSTOMER` | Tạo reservation + payment link |
+| `GET` | `/api/v1/orders?status=&refundStatus=&pickupDateFrom=&pickupDateTo=&page=&size=` | `CUSTOMER` | List order của customer hiện tại |
 | `GET` | `/api/v1/orders/{orderId}` | `CUSTOMER` owner | Lấy trạng thái order |
+| `GET` | `/api/v1/orders/{orderId}/timeline` | `CUSTOMER` owner | Xem timeline trạng thái order |
 | `POST` | `/api/v1/orders/{orderId}/cancel` | `CUSTOMER` owner | Customer cancel |
+| `GET` | `/api/v1/merchant/stores/{storeId}/orders?date=&status=&page=&size=` | Owner/manager/staff | Merchant list order theo store/ngày |
+| `GET` | `/api/v1/merchant/stores/{storeId}/orders/{orderId}` | Owner/manager/staff | Merchant xem order detail |
+| `POST` | `/api/v1/merchant/stores/{storeId}/orders/{orderId}/ready` | Owner/manager/staff | Chuyển `PAID -> READY_FOR_PICKUP` |
+| `POST` | `/api/v1/merchant/stores/{storeId}/orders/{orderId}/cancel` | Owner/manager/staff | Merchant cancel/no-stock và auto refund nếu đã paid |
+| `GET` | `/api/v1/merchant/stores/{storeId}/orders/{orderId}/timeline` | Owner/manager/staff | Merchant xem timeline order của store |
 | `POST` | `/api/v1/payments/payos/webhook` | Public PayOS | Nhận webhook thanh toán |
 
 ### Create order request
@@ -566,15 +582,45 @@ stateDiagram-v2
     PENDING_PAYMENT --> PAID: PayOS webhook success before expiry
     PENDING_PAYMENT --> EXPIRED: payment TTL expired
     PENDING_PAYMENT --> CANCELLED: customer cancel before pickup_start - 2h
+    PAID --> READY_FOR_PICKUP: merchant marks ready
+    READY_FOR_PICKUP --> PICKED_UP: merchant confirms code/QR
     PAID --> PICKED_UP: merchant confirms code/QR
     PAID --> EXPIRED: no-show after pickup_end + 15m
+    READY_FOR_PICKUP --> EXPIRED: no-show after pickup_end + 15m
     PAID --> CANCELLED: customer cancel before pickup_start - 2h
+    READY_FOR_PICKUP --> CANCELLED: merchant cancel/no-stock
     PICKED_UP --> [*]
     EXPIRED --> [*]
     CANCELLED --> [*]
 ```
 
-`READY_FOR_PICKUP` có trong enum và job/query, nhưng code hiện tại chưa có endpoint/logic chuyển order sang `READY_FOR_PICKUP`.
+### Customer order list và timeline
+
+1. FE gọi `GET /api/v1/orders` để render lịch sử đơn của customer hiện tại.
+2. Filter optional: `status`, `refundStatus`, `pickupDateFrom`, `pickupDateTo`.
+3. Backend chỉ trả order của user từ JWT, sort mặc định `createdAt DESC`.
+4. Response là `PageResponse<OrderResponse>`.
+5. `pickupQrToken` luôn `null` ở list/detail sau create; FE không được kỳ vọng lấy lại raw QR token từ API này.
+6. FE gọi `GET /api/v1/orders/{orderId}/timeline` để hiển thị lịch sử trạng thái từ `order_status_history`.
+
+### Merchant order management
+
+1. Owner/manager/staff gọi `GET /api/v1/merchant/stores/{storeId}/orders`; nếu không truyền `date`, backend lấy ngày hiện tại theo server clock.
+2. Response `MerchantOrderResponse` không trả raw `pickupCode`, raw QR token hoặc hash.
+3. Khi store đã chuẩn bị xong túi, FE gọi `POST /merchant/stores/{storeId}/orders/{orderId}/ready`.
+4. Backend chỉ cho `PAID -> READY_FOR_PICKUP`; gọi lại khi đã ready là idempotent.
+5. Nếu store phải hủy/no-stock, FE gọi `POST /merchant/stores/{storeId}/orders/{orderId}/cancel`:
+
+```json
+{
+  "reason": "STORE_NO_STOCK",
+  "note": "Store ran out of this bag"
+}
+```
+
+6. `PENDING_PAYMENT` sẽ release reserved stock.
+7. `PAID`/`READY_FOR_PICKUP` sẽ tạo auto refund, không bán lại stock để tránh oversell/fulfillment sai.
+8. Merchant xem timeline bằng `/merchant/stores/{storeId}/orders/{orderId}/timeline`.
 
 ### Customer cancel
 
@@ -637,16 +683,30 @@ Nếu order đã `PICKED_UP`, API trả response hiện tại thay vì lỗi. FE
 | Method | Endpoint | Role | Mục đích |
 | --- | --- | --- | --- |
 | `POST` | `/api/v1/refunds/{orderId}/request` | `CUSTOMER` | Customer tạo dispute/refund request |
+| `PUT` | `/api/v1/refunds/{refundId}/destination` | `CUSTOMER` owner | Bổ sung/cập nhật tài khoản nhận hoàn tiền |
+| `GET` | `/api/v1/refunds/orders/{orderId}` | `CUSTOMER` owner | Xem refund status theo order |
+| `GET` | `/api/v1/admin/refunds?status=&reason=&page=&size=` | `ADMIN` | List/filter refund request |
 | `POST` | `/api/v1/admin/refunds/{refundId}/review` | `ADMIN` | Admin approve/reject refund |
+| `POST` | `/api/v1/admin/refunds/{refundId}/retry` | `ADMIN` | Retry payout refund đã failed/approved |
+| `POST` | `/api/v1/admin/refunds/transactions/{transactionId}/mark-succeeded` | `ADMIN` | Manual fallback: mark transaction thành công |
+| `POST` | `/api/v1/admin/refunds/transactions/{transactionId}/mark-failed` | `ADMIN` | Manual fallback: mark transaction thất bại |
 
 ### Customer refund request
 
 ```json
 {
   "reason": "QUALITY_ISSUE",
-  "description": "Food was unsafe..."
+  "description": "Food was unsafe...",
+  "refundDestination": {
+    "bankCode": "970436",
+    "bankName": "Vietcombank",
+    "accountHolderName": "NGUYEN VAN A",
+    "accountNumber": "0123456789"
+  }
 }
 ```
+
+`refundDestination` là optional khi tạo dispute. Nếu chưa có, backend vẫn cho tạo request, nhưng refund đã approve sẽ trả `destinationRequired=true` để FE nhắc customer bổ sung tài khoản nhận tiền.
 
 `RefundReason` hiện có:
 
@@ -658,14 +718,16 @@ Nếu order đã `PICKED_UP`, API trả response hiện tại thay vì lỗi. FE
 - `QUANTITY_SHORTAGE`
 - `PLATFORM_ERROR`
 - `CUSTOMER_COMPLAINT`
+- `OTHER`
 
 ### Luồng customer dispute
 
 1. Customer chỉ request refund sau khi order đã kết thúc: `PICKED_UP` hoặc `EXPIRED`.
 2. Backend giới hạn trong 30 ngày từ `pickedUpAt` hoặc `expiredAt`.
 3. Mỗi order chỉ có một refund request.
-4. Backend tạo `refund_requests(PENDING_REVIEW)`, set `order.refundStatus=REQUESTED`.
-5. Admin review.
+4. Backend mã hóa `refundDestination.accountNumber` nếu customer gửi kèm, chỉ expose lại dạng `****last4`.
+5. Backend tạo `refund_requests(PENDING_REVIEW)`, set `order.refundStatus=REQUESTED`.
+6. FE dùng `GET /refunds/orders/{orderId}` để xem `status`, `approvedAmount`, `destinationRequired`, `transactions`.
 
 ### Admin review refund
 
@@ -673,10 +735,10 @@ Nếu order đã `PICKED_UP`, API trả response hiện tại thay vì lỗi. FE
 2. Nếu approve:
    - Refund status `APPROVED`.
    - Set `approvedAmount`, mặc định bằng `requestedAmount`.
-   - Tạo `refund_transactions(PENDING)`.
-   - Method hiện là `MANUAL_BANK_TRANSFER`.
    - Ghi ledger `REFUND_RESERVED`.
    - Order `refundStatus=APPROVED`.
+   - Nếu đã có refund destination, backend tạo `refund_transactions(PENDING, method=PAYOS_PAYOUT)` và chuyển refund sang `PROCESSING`.
+   - Nếu chưa có destination, chưa tạo payout transaction; response trả `destinationRequired=true`.
 3. Nếu reject:
    - Refund status `REJECTED`.
    - Order `refundStatus=REJECTED`.
@@ -690,16 +752,31 @@ Backend tự tạo auto refund trong các case hiện có:
 - Customer cancel order đã paid trước `pickupStartTime - 2h`.
 - Các service khác có thể gọi `createAutoRefund` với reason tương ứng.
 
-Auto refund được approve ngay và tạo `refund_transactions(PENDING)`.
+Auto refund được approve ngay và ghi ledger `REFUND_RESERVED`. Nếu customer đã bổ sung destination cho refund đó, backend tạo `PAYOS_PAYOUT`; nếu chưa, FE cần gọi `PUT /refunds/{refundId}/destination`.
+
+### Refund payout worker và manual fallback
+
+1. Job `RefundTransactionJob` chạy định kỳ, lấy `refund_transactions(PENDING, method=PAYOS_PAYOUT)`.
+2. Worker gọi PayOS payout với idempotency key dạng `refund:{refundId}:attempt:{n}` và category `customer_refund`.
+3. Nếu PayOS trả state success:
+   - Transaction `SUCCEEDED`.
+   - Refund `REFUNDED`.
+   - Order/payment `REFUNDED` hoặc `PARTIALLY_REFUNDED`.
+   - Ledger ghi `REFUND_PAID`, giảm platform cash/refund liability và đảo merchant payable/commission theo tỷ lệ refund.
+   - Customer nhận notification `ORDER_REFUNDED`.
+4. Nếu PayOS lỗi:
+   - Transaction `FAILED`.
+   - Refund `FAILED`.
+   - Admin có thể `retry` để tạo transaction mới hoặc manual mark succeeded/failed sau khi chuyển khoản ngoài hệ thống.
+5. Nếu PayOS trả state chưa final, transaction giữ `PENDING`, refund giữ `PROCESSING`; worker sẽ retry idempotent.
 
 ### Điều cực quan trọng cho FE
 
-Hiện code đã có refund request, refund transaction và ledger reserve, nhưng chưa có worker chuyển tiền thật cho refund. Nghĩa là:
-
-- `refund.status=APPROVED` không đồng nghĩa tiền đã về khách.
-- `refund_transactions.status=PENDING` nghĩa là còn chờ vận hành/manual bank transfer hoặc worker tương lai xử lý.
-- FE nên hiển thị “Đã duyệt hoàn tiền, đang xử lý chuyển tiền” thay vì “Đã hoàn tiền thành công”.
-- `OrderRefundStatus.REFUNDED` và `RefundStatus.REFUNDED` có enum nhưng hiện chưa thấy service nào mark thành công sau chuyển tiền thật.
+- `refund.status=APPROVED` nghĩa là đã duyệt chính sách, chưa chắc đã có đủ bank destination.
+- `refund.status=PROCESSING` nghĩa là đã có payout transaction đang chạy qua worker.
+- `refund.status=REFUNDED` mới là tiền đã được backend ghi nhận hoàn tất.
+- `destinationRequired=true` thì FE phải mở form nhập bank destination.
+- Admin manual mark là fallback vận hành, không phải luồng customer tự làm.
 
 ## 12. Review, Rating, Review Report
 
@@ -795,6 +872,10 @@ FE có thể render:
    - Tạo `platform_commissions(EARNED)`.
 3. Refund approved:
    - Credit `REFUND_LIABILITY`.
+4. Refund paid:
+   - Debit `REFUND_LIABILITY`.
+   - Debit `PLATFORM_CASH`.
+   - Reverse merchant payable/platform commission theo tỷ lệ refund nếu order đã từng được ghi payable.
 
 ### Merchant payable balance
 
@@ -834,7 +915,7 @@ stateDiagram-v2
 
 ### Lưu ý FE
 
-- Merchant payout cần bank account `APPROVED`; hiện chưa có admin bank approval endpoint.
+- Merchant payout cần bank account `APPROVED`; admin duyệt ở `/api/v1/admin/bank-accounts`.
 - FE merchant nên tách rõ:
   - `payable-balance`: số ledger merchant có thể/đang được đối soát.
   - `settlements`: các kỳ đối soát.
@@ -928,9 +1009,22 @@ Reject/request changes sẽ:
 
 ### Admin audit log hiện có
 
+Admin xem audit log qua:
+
+| Method | Endpoint | Role | Mục đích |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/admin/audit-logs?actorId=&action=&targetType=&targetId=&from=&to=&page=&size=` | `ADMIN` | List/search audit log |
+
 Backend đang ghi `admin_audit_logs` cho:
 
 - `REFUND_REVIEW`
+- `REFUND_RETRY`
+- `REFUND_TRANSACTION_MARK_SUCCEEDED`
+- `REFUND_TRANSACTION_MARK_FAILED`
+- `BANK_ACCOUNT_APPROVE`
+- `BANK_ACCOUNT_REJECT`
+- `MERCHANT_ORDER_READY`
+- `MERCHANT_ORDER_CANCEL`
 - `REVIEW_REPORT_RESOLVE`
 - `REVIEW_HIDE`
 - `SETTLEMENT_DRAFT_CREATE`
@@ -940,21 +1034,24 @@ Backend đang ghi `admin_audit_logs` cho:
 - `PAYOUT_MARK_PAID`
 - `PAYOUT_MARK_FAILED`
 
-Hiện chưa thấy controller để FE/admin UI list `admin_audit_logs`.
-
 ### Order status history
 
 Backend ghi `order_status_history` cho:
 
 - Customer reserve order.
 - Customer cancel order.
+- Merchant mark ready for pickup.
+- Merchant cancel/no-stock.
 - Payment expired.
 - PayOS payment succeeded.
 - Late PayOS webhook after expiry.
 - Merchant confirm pickup.
 - Pickup no-show.
 
-Hiện chưa thấy endpoint để FE xem timeline order history.
+Timeline API hiện có:
+
+- Customer: `GET /api/v1/orders/{orderId}/timeline`, chỉ owner của order được xem.
+- Merchant: `GET /api/v1/merchant/stores/{storeId}/orders/{orderId}/timeline`, chỉ owner/manager/staff của store được xem.
 
 ## 16. Background Jobs Có Ảnh Hưởng Tới FE
 
@@ -966,6 +1063,7 @@ Hiện chưa thấy endpoint để FE xem timeline order history.
 | `BagStockJob.expireUnsoldStocks` | 23:55 Asia/Ho_Chi_Minh | Mark stock chưa bán là expired |
 | `PaymentLifecycleJob.expirePendingPayments` | Mỗi 60 giây mặc định | Expire order/payment pending quá TTL |
 | `PickupLifecycleJob.expireNoShows` | Mỗi 60 giây mặc định | Mark paid order missed pickup là no-show/expired |
+| `RefundTransactionJob.processPendingRefunds` | Mỗi 60 giây mặc định | Xử lý refund payout pending qua PayOS/manual fallback |
 | `NotificationReminderJob.sendPaymentAndPickupReminders` | Mỗi 60 giây mặc định | Gửi payment expiring và pickup reminders |
 
 FE cần refresh/poll order sau các mốc nhạy cảm vì trạng thái có thể đổi bởi job nền, không cần user action.
@@ -991,11 +1089,14 @@ FE cần refresh/poll order sau các mốc nhạy cảm vì trạng thái có th
    - Redirect/open PayOS checkout.
    - Poll `GET /orders/{orderId}` after return.
 5. Pickup:
+   - List orders bằng `GET /orders`.
    - Khi order `PAID`, show pickup code và QR từ create response.
+   - Xem lifecycle bằng `GET /orders/{orderId}/timeline`.
    - Reminders đến qua notification.
 6. After pickup:
    - Allow review trong 14 ngày nếu order `PICKED_UP`.
    - Allow refund dispute trong 30 ngày nếu order `PICKED_UP` hoặc `EXPIRED`.
+   - Nếu refund `destinationRequired=true`, mở form bank destination và gọi `PUT /refunds/{refundId}/destination`.
 7. Notifications:
    - Register FCM token.
    - Render inbox/unread count.
@@ -1021,6 +1122,9 @@ FE cần refresh/poll order sau các mốc nhạy cảm vì trạng thái có th
    - Set daily stock.
    - View stock audit logs.
 5. Pickup operation:
+   - List today orders bằng `/merchant/stores/{storeId}/orders`.
+   - Mark order ready bằng `/merchant/stores/{storeId}/orders/{orderId}/ready`.
+   - Cancel/no-stock order bằng `/merchant/stores/{storeId}/orders/{orderId}/cancel`.
    - Confirm pickup by code/QR.
 6. Money:
    - View payable balance.
@@ -1036,7 +1140,7 @@ FE cần refresh/poll order sau các mốc nhạy cảm vì trạng thái có th
 2. Change initial password if required.
 3. Load `/store-workspace/me`.
 4. Manager can create scoped bag and manage staff according to service rules.
-5. Staff/manager can list scoped bags and confirm pickups.
+5. Staff/manager can list scoped bags, list today orders, mark ready, cancel/no-stock và confirm pickups.
 
 ### Admin dashboard
 
@@ -1046,7 +1150,9 @@ FE cần refresh/poll order sau các mốc nhạy cảm vì trạng thái có th
 2. Price tier:
    - Configure category + bag size pricing.
 3. Refund:
+   - List/filter refund requests.
    - Review pending refund requests.
+   - Retry/manual resolve refund payout transactions.
 4. Review moderation:
    - List/resolve reports.
    - Hide reviews.
@@ -1055,7 +1161,12 @@ FE cần refresh/poll order sau các mốc nhạy cảm vì trạng thái có th
    - Approve.
    - Start payout.
    - Mark payout paid/failed.
-6. Notification:
+6. Bank account:
+   - List pending bank accounts.
+   - Approve/reject before settlement payout.
+7. Audit:
+   - Search admin audit logs.
+8. Notification:
    - Broadcast to active customers.
    - View FCM availability/active token stats.
 
@@ -1066,12 +1177,5 @@ Phần này không phải luồng hiện có, nhưng FE/backend nên biết đ�
 | Hạng mục | Hiện trạng |
 | --- | --- |
 | Voucher/campaign engine | Chưa có DB/code engine. Order có `discountAmount` nhưng chưa có API áp voucher/campaign. |
-| Customer order list | Có create/get/cancel by id, chưa thấy endpoint list orders của customer. |
-| Merchant today orders/order management | Có pickup confirm nhưng chưa thấy endpoint merchant list orders theo store/ngày. |
-| Ready-for-pickup transition | Enum có `READY_FOR_PICKUP`, nhưng chưa thấy API/service chuyển trạng thái này. |
-| Refund money worker | Có refund request/transaction pending, chưa có worker mark refund transaction succeeded/failed sau chuyển tiền thật. |
-| Bank account admin approval | Bank account cần `APPROVED` để payout, nhưng hiện chưa thấy controller admin duyệt bank account. |
-| Audit log viewer | Có ghi `admin_audit_logs`, chưa có endpoint list/search audit logs. |
-| Order timeline viewer | Có ghi `order_status_history`, chưa có endpoint trả timeline cho FE. |
+| Legal/refund policy wording | Hành vi refund đã có trong code, nhưng câu chữ điều khoản pháp lý cần luật sư/luật VN review trước launch. |
 | PayOS production smoke test | Không nằm trong code; cần chạy giao dịch nhỏ khi cấu hình production. |
-

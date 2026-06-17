@@ -1,12 +1,31 @@
 package com.LastBite.modules.refund.repository;
 
 import com.LastBite.modules.refund.entity.RefundRequest;
+import com.LastBite.modules.refund.enums.RefundReason;
+import com.LastBite.modules.refund.enums.RefundStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface RefundRequestRepository extends JpaRepository<RefundRequest, UUID> {
     List<RefundRequest> findByOrderId(UUID orderId);
+    Optional<RefundRequest> findFirstByOrderId(UUID orderId);
     boolean existsByOrderId(UUID orderId);
+
+    @EntityGraph(attributePaths = {"order", "order.user", "payment", "requestedBy", "reviewedBy"})
+    @Query("""
+        SELECT r FROM RefundRequest r
+        WHERE (:status IS NULL OR r.status = :status)
+          AND (:reason IS NULL OR r.reason = :reason)
+    """)
+    Page<RefundRequest> searchAdmin(@Param("status") RefundStatus status,
+                                    @Param("reason") RefundReason reason,
+                                    Pageable pageable);
 }

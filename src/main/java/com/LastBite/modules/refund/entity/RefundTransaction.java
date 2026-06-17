@@ -52,4 +52,14 @@ public class RefundTransaction extends BaseEntity {
 
     @Column(name = "processed_at")
     private Instant processedAt;
+
+    @Column(name = "failure_reason", length = 1000)
+    private String failureReason;
+
+    @Column(name = "idempotency_key", length = 160)
+    private String idempotencyKey;
+
+    @Column(name = "attempt_count", nullable = false)
+    @Builder.Default
+    private int attemptCount = 0;
 }

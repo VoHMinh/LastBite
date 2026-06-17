@@ -11,6 +11,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class BankAccountResponse {
     private UUID id;
+    private UUID businessProfileId;
     private UUID storeId;
     private String bankCode;
     private String bankName;

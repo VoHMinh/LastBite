@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -92,6 +93,42 @@ public class LedgerService {
         LedgerAccount refundLiability = account(LedgerOwnerType.PLATFORM, null, LedgerAccountType.REFUND_LIABILITY);
         credit(refundLiability, refundRequest.getOrder(), refundRequest.getPayment(), refundRequest,
                 LedgerEntryType.REFUND_RESERVED, amount, Instant.now(), "Refund approved");
+    }
+
+    @Transactional
+    public void recordRefundPaid(RefundRequest refundRequest, BigDecimal paidAmount) {
+        Order order = refundRequest.getOrder();
+        if (entryRepository.existsByOrderIdAndEntryType(order.getId(), LedgerEntryType.REFUND_PAID)) {
+            return;
+        }
+
+        LedgerAccount cash = account(LedgerOwnerType.PLATFORM, null, LedgerAccountType.PLATFORM_CASH);
+        LedgerAccount refundLiability = account(LedgerOwnerType.PLATFORM, null, LedgerAccountType.REFUND_LIABILITY);
+        debit(refundLiability, order, refundRequest.getPayment(), refundRequest, LedgerEntryType.REFUND_PAID,
+                paidAmount, Instant.now(), "Refund liability paid");
+        debit(cash, order, refundRequest.getPayment(), refundRequest, LedgerEntryType.REFUND_PAID,
+                paidAmount, Instant.now(), "Refund cash paid to customer");
+
+        BigDecimal ratio = order.getFinalAmount().signum() == 0
+                ? BigDecimal.ONE
+                : paidAmount.divide(order.getFinalAmount(), 6, RoundingMode.HALF_UP).min(BigDecimal.ONE);
+        reverseEarnedEntry(order, refundRequest, LedgerEntryType.MERCHANT_PAYABLE, ratio,
+                "Reverse merchant payable after refund");
+        reverseEarnedEntry(order, refundRequest, LedgerEntryType.PLATFORM_COMMISSION, ratio,
+                "Reverse platform commission after refund");
+    }
+
+    private void reverseEarnedEntry(Order order, RefundRequest refundRequest, LedgerEntryType type,
+                                    BigDecimal ratio, String description) {
+        entryRepository.findAllByOrderIdAndEntryType(order.getId(), type).stream()
+                .filter(entry -> entry.getDirection() == LedgerEntryDirection.CREDIT)
+                .forEach(entry -> {
+                    BigDecimal amount = entry.getAmount().multiply(ratio).setScale(0, RoundingMode.HALF_UP);
+                    if (amount.signum() > 0) {
+                        debit(entry.getAccount(), order, refundRequest.getPayment(), refundRequest,
+                                LedgerEntryType.REFUND_PAID, amount, Instant.now(), description);
+                    }
+                });
     }
 
     private LedgerAccount account(LedgerOwnerType ownerType, UUID ownerId, LedgerAccountType accountType) {

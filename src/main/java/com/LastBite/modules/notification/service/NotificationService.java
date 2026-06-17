@@ -69,6 +69,57 @@ public class NotificationService implements NotificationServicePort {
 
     @Override
     @Transactional
+    public void notifyOrderReadyForPickup(Order order) {
+        createForUser(
+                order.getUser().getId(),
+                NotificationType.ORDER_READY_FOR_PICKUP,
+                NotificationCategory.PICKUP,
+                "Don da san sang",
+                "Don " + order.getOrderNumber() + " tai " + order.getStore().getName() + " da san sang de nhan.",
+                null,
+                "/orders/" + order.getId(),
+                NotificationReferenceType.ORDER,
+                order.getId(),
+                orderPayload(order),
+                "ORDER_READY_FOR_PICKUP:" + order.getUser().getId() + ":" + order.getId());
+    }
+
+    @Override
+    @Transactional
+    public void notifyOrderCancelled(Order order) {
+        createForUser(
+                order.getUser().getId(),
+                NotificationType.ORDER_CANCELLED,
+                NotificationCategory.ORDER,
+                "Don hang da bi huy",
+                "Don " + order.getOrderNumber() + " da bi huy. Kiem tra chi tiet don de xem trang thai hoan tien.",
+                null,
+                "/orders/" + order.getId(),
+                NotificationReferenceType.ORDER,
+                order.getId(),
+                orderPayload(order),
+                "ORDER_CANCELLED:" + order.getUser().getId() + ":" + order.getId() + ":" + order.getCancelledAt());
+    }
+
+    @Override
+    @Transactional
+    public void notifyOrderRefunded(Order order) {
+        createForUser(
+                order.getUser().getId(),
+                NotificationType.ORDER_REFUNDED,
+                NotificationCategory.ORDER,
+                "Hoan tien thanh cong",
+                "Don " + order.getOrderNumber() + " da duoc cap nhat trang thai hoan tien.",
+                null,
+                "/orders/" + order.getId(),
+                NotificationReferenceType.ORDER,
+                order.getId(),
+                orderPayload(order),
+                "ORDER_REFUNDED:" + order.getUser().getId() + ":" + order.getId() + ":" + order.getRefundStatus());
+    }
+
+    @Override
+    @Transactional
     public void notifyPaymentExpiring(Order order) {
         createForUser(
                 order.getUser().getId(),

@@ -4,6 +4,7 @@ import com.LastBite.common.entity.BaseEntity;
 import com.LastBite.modules.payment.enums.GatewayRequestStatus;
 import com.LastBite.modules.payment.enums.GatewayRequestType;
 import com.LastBite.modules.payment.enums.PaymentProvider;
+import com.LastBite.modules.refund.entity.RefundTransaction;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -22,6 +23,10 @@ public class PaymentGatewayRequest extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_id")
     private Payment payment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "refund_transaction_id")
+    private RefundTransaction refundTransaction;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

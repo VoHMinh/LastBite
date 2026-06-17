@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -20,9 +21,17 @@ public class RefundResponse {
     private RefundStatus status;
     private BigDecimal requestedAmount;
     private BigDecimal approvedAmount;
+    private UUID reviewedByUserId;
+    private Instant reviewedAt;
     private String description;
     private String decisionNote;
     private boolean autoCreated;
+    private String refundBankCode;
+    private String refundBankName;
+    private String refundAccountHolderName;
+    private String maskedRefundAccountNumber;
+    private boolean destinationRequired;
+    private List<RefundTransactionResponse> transactions;
     private Instant createdAt;
     private Instant updatedAt;
 }

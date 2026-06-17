@@ -1,5 +1,7 @@
 package com.LastBite.modules.order.service.impl;
 
+import com.LastBite.common.response.PageResponse;
+import com.LastBite.modules.audit.dto.response.OrderStatusHistoryResponse;
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.common.util.HashUtil;
@@ -33,6 +35,7 @@ import com.LastBite.modules.store.enums.VerificationStatus;
 import com.LastBite.modules.store.service.StoreCalendarService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +45,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -141,6 +145,25 @@ public class OrderService implements OrderServicePort {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PageResponse<OrderResponse> list(UUID userId, OrderStatus status, OrderRefundStatus refundStatus,
+                                            LocalDate pickupDateFrom, LocalDate pickupDateTo, Pageable pageable) {
+        var page = orderRepository.searchCustomerOrders(userId, status, refundStatus,
+                pickupDateFrom, pickupDateTo, pageable)
+                .map(order -> toResponse(order, paymentService.findByOrderId(order.getId()).orElse(null), null));
+        return new PageResponse<>(page.getContent(), page.getNumber(), page.getSize(),
+                page.getTotalElements(), page.getTotalPages());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderStatusHistoryResponse> timeline(UUID userId, UUID orderId) {
+        orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
+        return statusHistoryService.timeline(orderId);
+    }
+
+    @Override
     @Transactional
     @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public OrderResponse cancel(UUID userId, UUID orderId) {
@@ -171,6 +194,7 @@ public class OrderService implements OrderServicePort {
         order.setCancelledAt(Instant.now(clock));
         statusHistoryService.record(order, previous, OrderStatus.CANCELLED, order.getUser(), AuditActorType.CUSTOMER,
                 "Customer cancelled order", null);
+        notificationService.notifyOrderCancelled(order);
         return toResponse(order, payment, null);
     }
 

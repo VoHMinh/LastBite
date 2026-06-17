@@ -8,6 +8,7 @@ public record CreatePayoutCommand(
         String description,
         String toBin,
         String toAccountNumber,
-        String idempotencyKey
+        String idempotencyKey,
+        String category
 ) {
 }
