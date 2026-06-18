@@ -4,9 +4,12 @@ import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.auth.dto.response.UserResponse;
 import com.LastBite.modules.user.dto.request.AddressRequest;
 import com.LastBite.modules.user.dto.request.ChangePasswordRequest;
+import com.LastBite.modules.user.dto.request.UpdateDiscoveryPreferenceRequest;
 import com.LastBite.modules.user.dto.request.UpdateProfileRequest;
 import com.LastBite.modules.user.dto.response.AddressResponse;
+import com.LastBite.modules.user.dto.response.DiscoveryPreferenceResponse;
 import com.LastBite.modules.user.service.AddressServicePort;
+import com.LastBite.modules.user.service.DiscoveryPreferenceServicePort;
 import com.LastBite.modules.user.service.FavoriteStoreServicePort;
 import com.LastBite.modules.user.service.UserServicePort;
 import com.LastBite.modules.store.dto.response.StoreResponse;
@@ -32,6 +35,7 @@ public class UserController {
     private final UserServicePort userService;
     private final AddressServicePort addressService;
     private final FavoriteStoreServicePort favoriteStoreService;
+    private final DiscoveryPreferenceServicePort discoveryPreferenceService;
 
     // ── Profile ──
 
@@ -62,6 +66,33 @@ public class UserController {
     }
 
     // ── Addresses ──
+
+    @GetMapping("/me/discovery-preferences")
+    @Operation(summary = "Get saved discovery location and preferences")
+    public ResponseEntity<ApiResponse<DiscoveryPreferenceResponse>> getDiscoveryPreferences(
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(discoveryPreferenceService.get(userId)));
+    }
+
+    @PutMapping("/me/discovery-preferences")
+    @Operation(summary = "Update saved discovery location and preferences")
+    public ResponseEntity<ApiResponse<DiscoveryPreferenceResponse>> updateDiscoveryPreferences(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody UpdateDiscoveryPreferenceRequest request) {
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(discoveryPreferenceService.update(userId, request),
+                "Discovery preferences updated"));
+    }
+
+    @PostMapping("/me/discovery-preferences/skip-onboarding")
+    @Operation(summary = "Skip discovery preference onboarding")
+    public ResponseEntity<ApiResponse<DiscoveryPreferenceResponse>> skipDiscoveryPreferenceOnboarding(
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(discoveryPreferenceService.skipOnboarding(userId),
+                "Discovery onboarding skipped"));
+    }
 
     @GetMapping("/me/addresses")
     @Operation(summary = "Danh sách địa chỉ giao hàng")
