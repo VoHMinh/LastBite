@@ -129,6 +129,9 @@ Riêng một số endpoint Spring Data trả trực tiếp `Page<T>` trong `resu
 | `GET` | `/api/v1/users/me` | Authenticated | Lấy profile |
 | `PUT` | `/api/v1/users/me` | Authenticated | Cập nhật `fullName`, `phone`, `avatarUrl` |
 | `PUT` | `/api/v1/users/me/password` | Authenticated | Đổi password local |
+| `GET` | `/api/v1/users/me/discovery-preferences` | Authenticated | Lấy chosen location, radius, diet/time preferences |
+| `PUT` | `/api/v1/users/me/discovery-preferences` | Authenticated | Lưu chosen location, radius, diet/time preferences |
+| `POST` | `/api/v1/users/me/discovery-preferences/skip-onboarding` | Authenticated | Bỏ qua onboarding preference |
 | `GET` | `/api/v1/users/me/addresses` | Authenticated | Danh sách địa chỉ |
 | `POST` | `/api/v1/users/me/addresses` | Authenticated | Thêm địa chỉ |
 | `PUT` | `/api/v1/users/me/addresses/{addressId}` | Authenticated | Sửa địa chỉ |
@@ -144,6 +147,31 @@ Riêng một số endpoint Spring Data trả trực tiếp `Page<T>` trong `resu
 2. User cập nhật profile qua `PUT /users/me`.
 3. Nếu đổi số điện thoại, backend check trùng phone.
 4. Nếu tài khoản là OAuth và không có password hash, API đổi password sẽ bị chặn.
+
+### Luồng discovery preferences, chosen location và onboarding
+
+1. Khi user mới vào app, FE gọi `GET /api/v1/users/me/discovery-preferences`.
+2. Nếu `shouldShowOnboarding=true`, FE mở onboarding chọn 2 mục:
+   - Dietary preference: `EAT_EVERYTHING`, `VEGETARIAN`, `VEGAN`, `NOT_SPECIFIED`.
+   - Preferred collection times: `EARLY_MORNING`, `LATE_MORNING`, `MIDDAY`, `AFTERNOON`, `EVENING`, `LATE_NIGHT`.
+3. User có thể skip bằng `POST /api/v1/users/me/discovery-preferences/skip-onboarding`; sau đó backend trả `onboardingStatus=SKIPPED` và không tự hỏi lại.
+4. Màn Choose location dùng Goong Map/Goong Places ở FE để lấy `label`, `lat`, `lng`; backend không gọi Goong/geocoding.
+5. FE chọn bán kính trên UI, nếu UI dùng mile thì convert sang kilometer trước khi gửi `defaultRadiusKm`.
+6. FE lưu bằng `PUT /api/v1/users/me/discovery-preferences`:
+
+```json
+{
+  "preferredDiet": "VEGETARIAN",
+  "preferredCollectionTimes": ["EVENING", "LATE_NIGHT"],
+  "defaultLocationLabel": "Syracuse",
+  "defaultLat": 43.0481,
+  "defaultLng": -76.1474,
+  "defaultRadiusKm": 22.5
+}
+```
+
+7. Response có `defaultLocationLabel`, `defaultLat`, `defaultLng`, `defaultRadiusKm`, `preferredDiet`, `preferredCollectionTimes`, `onboardingStatus`, `shouldShowOnboarding`.
+8. Trang Home render kiểu `Chosen location Syracuse` từ `defaultLocationLabel`.
 
 ### Luồng address
 
@@ -400,12 +428,24 @@ Sau store-login, FE gọi `GET /api/v1/store-workspace/me` để biết member �
    - `sort=pickup_time|distance|price`
    - `limit`, từ 1 đến 100.
 3. Nếu truyền `lat` thì phải truyền cả `lng`.
-4. Nếu có JWT, response có `isFavoriteStore`.
-5. Response có các field quan trọng:
+4. Nếu user đã login và request không truyền `lat/lng`, backend tự dùng saved location trong `/users/me/discovery-preferences` nếu có.
+5. Nếu request có `lat/lng/radius`, tọa độ trong request luôn override saved location.
+6. `dietType` query là filter cứng. Nếu không truyền `dietType`, backend dùng `preferredDiet` đã lưu để ưu tiên mềm bag phù hợp lên trước, không ẩn bag khác.
+7. `preferredCollectionTimes` cũng chỉ ưu tiên mềm bag có pickup window overlap slot đã chọn.
+8. Nếu có JWT, response có `isFavoriteStore`.
+9. Response có các field quan trọng:
    - `currentSalePrice`, `savingsAmount`, `currentDiscountPercent`
    - `quantity`, `reserved`, `sold`, `available`, `soldOut`
    - `pickupStartTime`, `pickupEndTime`, `minutesUntilPickup`, `pickupActive`
    - `maxPerOrder`, `containerProvided`, `carrierBagProvided`, `packagingNote`
+
+### Home chosen location flow
+
+1. FE gọi `GET /api/v1/users/me/discovery-preferences`.
+2. Nếu có `defaultLocationLabel`, FE render header `Chosen location {defaultLocationLabel}`.
+3. FE gọi `/api/v1/bags/nearby` không cần truyền `lat/lng`; backend sẽ dùng saved `defaultLat/defaultLng/defaultRadiusKm`.
+4. Nếu user chọn location khác tạm thời trên map, FE có thể gọi `/bags/nearby?lat=...&lng=...&radius=...` để preview; khi user bấm Apply thì gọi `PUT /users/me/discovery-preferences` để lưu mặc định mới.
+5. Backend lưu radius bằng kilometer; UI dùng mile thì FE tự convert qua km trước khi gọi API.
 
 ### Dynamic pricing
 
@@ -1077,7 +1117,9 @@ FE cần refresh/poll order sau các mốc nhạy cảm vì trạng thái có th
    - Verify email nếu cần.
    - Refresh token khi access token hết hạn.
 2. Home/discovery:
-   - Load `/bags/today` hoặc `/bags/nearby`.
+   - Load `/users/me/discovery-preferences` để lấy chosen location, onboarding status và preference.
+   - Nếu chưa có preference hoặc `shouldShowOnboarding=true`, mở màn chọn diet/collection times; user có thể skip.
+   - Load `/bags/today` hoặc `/bags/nearby`; nếu không gửi `lat/lng`, backend dùng saved location của user.
    - Load `/stores` nếu màn store directory.
    - Optional JWT để có favorite flag.
 3. Store detail:

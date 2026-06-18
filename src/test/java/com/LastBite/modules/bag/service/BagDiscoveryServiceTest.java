@@ -8,7 +8,11 @@ import com.LastBite.modules.bag.repository.BagDiscoveryProjection;
 import com.LastBite.modules.bag.service.impl.BagDiscoveryService;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
 import com.LastBite.modules.store.enums.StoreCategory;
+import com.LastBite.modules.user.entity.UserDiscoveryPreference;
+import com.LastBite.modules.user.enums.CollectionTimeSlot;
+import com.LastBite.modules.user.enums.PreferredDiet;
 import com.LastBite.modules.user.repository.FavoriteStoreRepository;
+import com.LastBite.modules.user.repository.UserDiscoveryPreferenceRepository;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -17,8 +21,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,9 +36,10 @@ class BagDiscoveryServiceTest {
 
     private final BagDailyStockRepository stockRepository = mock(BagDailyStockRepository.class);
     private final FavoriteStoreRepository favoriteStoreRepository = mock(FavoriteStoreRepository.class);
+    private final UserDiscoveryPreferenceRepository discoveryPreferenceRepository = mock(UserDiscoveryPreferenceRepository.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagDiscoveryService service = new BagDiscoveryService(
-            stockRepository, favoriteStoreRepository, new BagPricingService(clock), clock);
+            stockRepository, favoriteStoreRepository, discoveryPreferenceRepository, new BagPricingService(clock), clock);
 
     @Test
     void discoverPassesDietAndBagTypeFiltersToRepository() {
@@ -83,7 +90,90 @@ class BagDiscoveryServiceTest {
         assertTrue(detail.isCarrierBagProvided());
     }
 
+    @Test
+    void discoverUsesSavedLocationWhenRequestDoesNotSendLatLng() {
+        UUID userId = UUID.randomUUID();
+        when(discoveryPreferenceRepository.findByUserId(userId))
+                .thenReturn(Optional.of(preference(PreferredDiet.NOT_SPECIFIED, Set.of(), 43.0481, -76.1474, 22.5)));
+        BagDiscoveryProjection projection = row(DietType.MEAT, BagType.MEAL);
+        when(stockRepository.discoverWithLocation(
+                any(), any(), anyDouble(), anyDouble(), anyDouble(), any(), any(), any(), any(), any(), anyInt()))
+                .thenReturn(List.of(projection));
+
+        service.discover(userId, null, null, 5.0, null, null, null, null, "pickup_time", 10);
+
+        verify(stockRepository).discoverWithLocation(
+                LocalDate.of(2026, 5, 25),
+                LocalTime.of(10, 0),
+                43.0481,
+                -76.1474,
+                22.5,
+                null,
+                null,
+                null,
+                null,
+                "pickup_time",
+                10);
+    }
+
+    @Test
+    void discoverRequestLocationOverridesSavedLocation() {
+        UUID userId = UUID.randomUUID();
+        when(discoveryPreferenceRepository.findByUserId(userId))
+                .thenReturn(Optional.of(preference(PreferredDiet.NOT_SPECIFIED, Set.of(), 43.0481, -76.1474, 22.5)));
+        BagDiscoveryProjection projection = row(DietType.MEAT, BagType.MEAL);
+        when(stockRepository.discoverWithLocation(
+                any(), any(), anyDouble(), anyDouble(), anyDouble(), any(), any(), any(), any(), any(), anyInt()))
+                .thenReturn(List.of(projection));
+
+        service.discover(userId, 10.0, 20.0, 7.0, null, null, null, null, "pickup_time", 10);
+
+        verify(stockRepository).discoverWithLocation(
+                LocalDate.of(2026, 5, 25),
+                LocalTime.of(10, 0),
+                10.0,
+                20.0,
+                7.0,
+                null,
+                null,
+                null,
+                null,
+                "pickup_time",
+                10);
+    }
+
+    @Test
+    void discoverSoftRanksDietAndCollectionTimePreferencesWithoutFilteringOthers() {
+        UUID userId = UUID.randomUUID();
+        when(discoveryPreferenceRepository.findByUserId(userId))
+                .thenReturn(Optional.of(preference(PreferredDiet.VEGAN,
+                        Set.of(CollectionTimeSlot.EVENING), null, null, null)));
+        BagDiscoveryProjection meatRow = row(DietType.MEAT, BagType.MEAL, LocalTime.of(18, 0), LocalTime.of(19, 0));
+        BagDiscoveryProjection veganRow = row(DietType.VEGAN, BagType.MEAL, LocalTime.of(20, 0), LocalTime.of(21, 0));
+        when(stockRepository.discoverWithoutLocation(
+                any(), any(), any(), any(), any(), any(), any(), anyInt()))
+                .thenReturn(List.of(meatRow, veganRow));
+
+        var results = service.discover(userId, null, null, 5.0, null, null, null, null, "pickup_time", 2);
+
+        assertEquals(DietType.VEGAN, results.getFirst().getDietType());
+        assertEquals(DietType.MEAT, results.get(1).getDietType());
+        verify(stockRepository).discoverWithoutLocation(
+                LocalDate.of(2026, 5, 25),
+                LocalTime.of(10, 0),
+                null,
+                null,
+                null,
+                null,
+                "pickup_time",
+                50);
+    }
+
     private BagDiscoveryProjection row(DietType dietType, BagType bagType) {
+        return row(dietType, bagType, LocalTime.of(20, 0), LocalTime.of(21, 0));
+    }
+
+    private BagDiscoveryProjection row(DietType dietType, BagType bagType, LocalTime pickupStart, LocalTime pickupEnd) {
         BagDiscoveryProjection row = mock(BagDiscoveryProjection.class);
         when(row.getBagId()).thenReturn(UUID.randomUUID());
         when(row.getStoreId()).thenReturn(UUID.randomUUID());
@@ -113,12 +203,26 @@ class BagDiscoveryServiceTest {
         when(row.getCarrierBagProvided()).thenReturn(true);
         when(row.getPackagingNote()).thenReturn("Bring your own bag if possible.");
         when(row.getStockDate()).thenReturn(LocalDate.of(2026, 5, 25));
-        when(row.getPickupStartTime()).thenReturn(LocalTime.of(20, 0));
-        when(row.getPickupEndTime()).thenReturn(LocalTime.of(21, 0));
+        when(row.getPickupStartTime()).thenReturn(pickupStart);
+        when(row.getPickupEndTime()).thenReturn(pickupEnd);
         when(row.getQuantity()).thenReturn(3);
         when(row.getReserved()).thenReturn(0);
         when(row.getSold()).thenReturn(0);
         when(row.getAvailable()).thenReturn(3);
         return row;
+    }
+
+    private UserDiscoveryPreference preference(PreferredDiet preferredDiet,
+                                               Set<CollectionTimeSlot> collectionTimeSlots,
+                                               Double lat,
+                                               Double lng,
+                                               Double radiusKm) {
+        return UserDiscoveryPreference.builder()
+                .preferredDiet(preferredDiet)
+                .preferredCollectionTimes(new LinkedHashSet<>(collectionTimeSlots))
+                .defaultLat(lat)
+                .defaultLng(lng)
+                .defaultRadiusKm(radiusKm)
+                .build();
     }
 }

@@ -11,7 +11,11 @@ import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagDiscoveryProjection;
 import com.LastBite.modules.bag.service.BagDiscoveryServicePort;
 import com.LastBite.modules.store.enums.StoreCategory;
+import com.LastBite.modules.user.entity.UserDiscoveryPreference;
+import com.LastBite.modules.user.enums.CollectionTimeSlot;
+import com.LastBite.modules.user.enums.PreferredDiet;
 import com.LastBite.modules.user.repository.FavoriteStoreRepository;
+import com.LastBite.modules.user.repository.UserDiscoveryPreferenceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -33,9 +37,13 @@ public class BagDiscoveryService implements BagDiscoveryServicePort {
 
     private static final int DEFAULT_LIMIT = 50;
     private static final double DEFAULT_RADIUS_KM = 5.0;
+    private static final int DIET_MATCH_SCORE = 100;
+    private static final int DIET_COMPATIBLE_SCORE = 80;
+    private static final int COLLECTION_TIME_MATCH_SCORE = 60;
 
     private final BagDailyStockRepository stockRepository;
     private final FavoriteStoreRepository favoriteStoreRepository;
+    private final UserDiscoveryPreferenceRepository discoveryPreferenceRepository;
     private final BagPricingService pricingService;
     private final Clock clock;
 
@@ -53,7 +61,9 @@ public class BagDiscoveryService implements BagDiscoveryServicePort {
                                                     String sort, Integer limit) {
         String normalizedSort = normalizeSort(sort);
         int normalizedLimit = normalizeLimit(limit);
-        int queryLimit = normalizedSort.equals("price")
+        UserDiscoveryPreference preference = loadPreference(userId);
+        boolean hasPreferenceRanking = hasPreferenceRanking(preference, dietType != null);
+        int queryLimit = normalizedSort.equals("price") || hasPreferenceRanking
                 ? Math.min(100, Math.max(normalizedLimit * 3, DEFAULT_LIMIT))
                 : normalizedLimit;
         LocalDate today = LocalDate.now(clock);
@@ -71,16 +81,27 @@ public class BagDiscoveryService implements BagDiscoveryServicePort {
             throw new ApiException(ErrorCode.INVALID_INPUT, "Bán kính tìm kiếm phải lớn hơn 0 và tối đa 50 km");
         }
 
+        Double effectiveLat = lat;
+        Double effectiveLng = lng;
+        Double effectiveRadiusKm = radiusKm == null ? DEFAULT_RADIUS_KM : radiusKm;
+        if (!hasLat && hasSavedLocation(preference)) {
+            effectiveLat = preference.getDefaultLat();
+            effectiveLng = preference.getDefaultLng();
+            effectiveRadiusKm = preference.getDefaultRadiusKm();
+            hasLat = true;
+        }
+
         List<BagDiscoveryProjection> rows;
         if (hasLat) {
-            rows = stockRepository.discoverWithLocation(today, now, lat, lng,
-                    radiusKm == null ? DEFAULT_RADIUS_KM : radiusKm,
+            rows = stockRepository.discoverWithLocation(today, now, effectiveLat, effectiveLng,
+                    effectiveRadiusKm == null ? DEFAULT_RADIUS_KM : effectiveRadiusKm,
                     categoryValue, dietTypeValue, bagTypeValue, normalizedDistrict, normalizedSort, queryLimit);
         } else {
             rows = stockRepository.discoverWithoutLocation(today, now,
                     categoryValue, dietTypeValue, bagTypeValue, normalizedDistrict, normalizedSort, queryLimit);
         }
-        return sortSummaries(rows.stream().map(row -> toSummary(row, userId)).toList(), normalizedSort, normalizedLimit);
+        return sortSummaries(rows.stream().map(row -> toSummary(row, userId)).toList(),
+                normalizedSort, normalizedLimit, preference, dietType != null);
     }
 
     @Cacheable(value = "bag-detail", key = "#bagId + ':' + #userId")
@@ -232,19 +253,119 @@ public class BagDiscoveryService implements BagDiscoveryServicePort {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private List<PublicBagSummaryResponse> sortSummaries(List<PublicBagSummaryResponse> values, String sort, int limit) {
+    private List<PublicBagSummaryResponse> sortSummaries(List<PublicBagSummaryResponse> values, String sort, int limit,
+                                                         UserDiscoveryPreference preference, boolean explicitDietFilter) {
         Comparator<PublicBagSummaryResponse> comparator = Comparator.comparing(PublicBagSummaryResponse::isSoldOut);
+        Comparator<PublicBagSummaryResponse> preferenceComparator = Comparator
+                .comparingInt((PublicBagSummaryResponse value) -> preferenceScore(value, preference, explicitDietFilter))
+                .reversed();
         comparator = switch (sort) {
             case "distance" -> comparator.thenComparing(
                     PublicBagSummaryResponse::getDistanceKm,
-                    Comparator.nullsLast(Double::compareTo));
-            case "price" -> comparator.thenComparing(PublicBagSummaryResponse::getCurrentSalePrice);
-            default -> comparator.thenComparing(PublicBagSummaryResponse::getPickupStartTime);
+                    Comparator.nullsLast(Double::compareTo)).thenComparing(preferenceComparator);
+            case "price" -> comparator.thenComparing(PublicBagSummaryResponse::getCurrentSalePrice)
+                    .thenComparing(preferenceComparator);
+            default -> comparator.thenComparing(preferenceComparator)
+                    .thenComparing(PublicBagSummaryResponse::getPickupStartTime);
         };
         return values.stream()
                 .sorted(comparator.thenComparing(PublicBagSummaryResponse::getPickupStartTime))
                 .limit(limit)
                 .toList();
+    }
+
+    private UserDiscoveryPreference loadPreference(UUID userId) {
+        if (userId == null) return null;
+        return discoveryPreferenceRepository.findByUserId(userId).orElse(null);
+    }
+
+    private boolean hasSavedLocation(UserDiscoveryPreference preference) {
+        return preference != null
+                && preference.getDefaultLat() != null
+                && preference.getDefaultLng() != null
+                && preference.getDefaultRadiusKm() != null;
+    }
+
+    private boolean hasPreferenceRanking(UserDiscoveryPreference preference, boolean explicitDietFilter) {
+        if (preference == null) return false;
+        boolean hasDietPreference = !explicitDietFilter
+                && preference.getPreferredDiet() != null
+                && preference.getPreferredDiet() != PreferredDiet.EAT_EVERYTHING
+                && preference.getPreferredDiet() != PreferredDiet.NOT_SPECIFIED;
+        boolean hasCollectionTimePreference = preference.getPreferredCollectionTimes() != null
+                && !preference.getPreferredCollectionTimes().isEmpty();
+        return hasDietPreference || hasCollectionTimePreference;
+    }
+
+    private int preferenceScore(PublicBagSummaryResponse value, UserDiscoveryPreference preference,
+                                boolean explicitDietFilter) {
+        if (preference == null) return 0;
+        int score = 0;
+        if (!explicitDietFilter) {
+            score += dietPreferenceScore(value.getDietType(), preference.getPreferredDiet());
+        }
+        if (overlapsPreferredCollectionTime(value, preference)) {
+            score += COLLECTION_TIME_MATCH_SCORE;
+        }
+        return score;
+    }
+
+    private int dietPreferenceScore(DietType bagDietType, PreferredDiet preferredDiet) {
+        if (bagDietType == null || preferredDiet == null) return 0;
+        return switch (preferredDiet) {
+            case VEGETARIAN -> {
+                if (bagDietType == DietType.VEGETARIAN) yield DIET_MATCH_SCORE;
+                if (bagDietType == DietType.VEGAN) yield DIET_COMPATIBLE_SCORE;
+                yield 0;
+            }
+            case VEGAN -> bagDietType == DietType.VEGAN ? DIET_MATCH_SCORE : 0;
+            case EAT_EVERYTHING, NOT_SPECIFIED -> 0;
+        };
+    }
+
+    private boolean overlapsPreferredCollectionTime(PublicBagSummaryResponse value,
+                                                    UserDiscoveryPreference preference) {
+        if (preference.getPreferredCollectionTimes() == null
+                || preference.getPreferredCollectionTimes().isEmpty()
+                || value.getPickupStartTime() == null
+                || value.getPickupEndTime() == null) {
+            return false;
+        }
+        return preference.getPreferredCollectionTimes().stream()
+                .anyMatch(slot -> overlapsSlot(value.getPickupStartTime(), value.getPickupEndTime(), slot));
+    }
+
+    private boolean overlapsSlot(LocalTime start, LocalTime end, CollectionTimeSlot slot) {
+        int startSecond = start.toSecondOfDay();
+        int endSecond = end.equals(LocalTime.MIDNIGHT) ? 24 * 60 * 60 : end.toSecondOfDay();
+        if (endSecond <= startSecond) {
+            endSecond += 24 * 60 * 60;
+        }
+        int slotStart = slotStartSecond(slot);
+        int slotEnd = slotEndSecond(slot);
+        return startSecond < slotEnd && endSecond > slotStart;
+    }
+
+    private int slotStartSecond(CollectionTimeSlot slot) {
+        return switch (slot) {
+            case EARLY_MORNING -> 6 * 60 * 60;
+            case LATE_MORNING -> 9 * 60 * 60;
+            case MIDDAY -> 12 * 60 * 60;
+            case AFTERNOON -> 15 * 60 * 60;
+            case EVENING -> 18 * 60 * 60;
+            case LATE_NIGHT -> 21 * 60 * 60;
+        };
+    }
+
+    private int slotEndSecond(CollectionTimeSlot slot) {
+        return switch (slot) {
+            case EARLY_MORNING -> 9 * 60 * 60;
+            case LATE_MORNING -> 12 * 60 * 60;
+            case MIDDAY -> 15 * 60 * 60;
+            case AFTERNOON -> 18 * 60 * 60;
+            case EVENING -> 21 * 60 * 60;
+            case LATE_NIGHT -> 24 * 60 * 60;
+        };
     }
 
     private List<String> parsePhotos(String value) {
