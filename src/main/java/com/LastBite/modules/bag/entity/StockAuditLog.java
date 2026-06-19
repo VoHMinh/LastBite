@@ -2,6 +2,7 @@ package com.LastBite.modules.bag.entity;
 
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.bag.enums.StockAuditAction;
+import com.LastBite.modules.bag.enums.StockAuditActorType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -41,6 +42,11 @@ public class StockAuditLog {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "actor_id")
     private User actor;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "actor_type", nullable = false, length = 30)
+    @Builder.Default
+    private StockAuditActorType actorType = StockAuditActorType.SYSTEM;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)

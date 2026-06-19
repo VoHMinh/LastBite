@@ -20,6 +20,7 @@ import com.LastBite.modules.bag.enums.BagStatus;
 import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.enums.StockAuditAction;
+import com.LastBite.modules.bag.enums.StockAuditActorType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagPriceTierRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
@@ -228,7 +229,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         stock.setStatus(resolveStockStatus(stock));
         stock = stockRepository.save(stock);
 
-        writeAudit(bag, stock, actor, StockAuditAction.STOCK_SET,
+        writeAudit(bag, stock, actor, StockAuditActorType.MERCHANT, StockAuditAction.STOCK_SET,
                 stock.getQuantity() - before, before, stock.getQuantity(), request.getReason());
         notifyFavoriteStoreIfNewAvailability(date, stock, availableBefore);
 
@@ -269,7 +270,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         stock.setStatus(resolveStockStatus(stock));
         stock = stockRepository.save(stock);
 
-        writeAudit(bag, stock, actor,
+        writeAudit(bag, stock, actor, StockAuditActorType.MERCHANT,
                 request.getDelta() > 0 ? StockAuditAction.STOCK_ADD : StockAuditAction.STOCK_REDUCE,
                 request.getDelta(), before, target, request.getReason());
         notifyFavoriteStoreIfNewAvailability(today, stock, availableBefore);
@@ -327,7 +328,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
             stock.setQuantity(after);
             stock.setStatus(DailyStockStatus.EXPIRED);
             stock = stockRepository.save(stock);
-            writeAudit(stock.getBag(), stock, null, StockAuditAction.EXPIRE_UNSOLD,
+            writeAudit(stock.getBag(), stock, null, StockAuditActorType.SYSTEM, StockAuditAction.EXPIRE_UNSOLD,
                     after - before, before, after, "Hệ thống tự động hết hạn túi chưa bán sau giờ pickup");
             expired++;
         }
@@ -422,12 +423,13 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         bag.setPlatformFee(tier.getPlatformFee());
     }
 
-    private void writeAudit(SurpriseBag bag, BagDailyStock stock, User actor, StockAuditAction action,
-                            int delta, int before, int after, String reason) {
+    private void writeAudit(SurpriseBag bag, BagDailyStock stock, User actor, StockAuditActorType actorType,
+                            StockAuditAction action, int delta, int before, int after, String reason) {
         auditLogRepository.save(StockAuditLog.builder()
                 .bag(bag)
                 .dailyStock(stock)
                 .actor(actor)
+                .actorType(actorType)
                 .action(action)
                 .delta(delta)
                 .quantityBefore(before)
@@ -508,6 +510,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                 .stockDate(stock == null ? null : stock.getDate())
                 .actorId(actor == null ? null : actor.getId())
                 .actorEmail(actor == null ? null : actor.getEmail())
+                .actorType(log.getActorType())
                 .action(log.getAction())
                 .delta(log.getDelta())
                 .quantityBefore(log.getQuantityBefore())

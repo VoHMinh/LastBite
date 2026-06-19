@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,4 +30,15 @@ public interface RefundRequestRepository extends JpaRepository<RefundRequest, UU
     Page<RefundRequest> searchAdmin(@Param("status") RefundStatus status,
                                     @Param("reason") RefundReason reason,
                                     Pageable pageable);
+    @Query("""
+        SELECT COUNT(r) FROM RefundRequest r
+        WHERE r.order.store.id = :storeId
+          AND r.reason IN :reasons
+          AND r.status IN :statuses
+          AND COALESCE(r.reviewedAt, r.createdAt) >= :from
+    """)
+    long countStoreFaultRefundsSince(@Param("storeId") UUID storeId,
+                                     @Param("reasons") Collection<RefundReason> reasons,
+                                     @Param("statuses") Collection<RefundStatus> statuses,
+                                     @Param("from") Instant from);
 }

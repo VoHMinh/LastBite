@@ -135,4 +135,13 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     List<Order> findOrdersPastPickupWindow(@Param("statuses") List<OrderStatus> statuses,
                                            @Param("today") LocalDate today,
                                            @Param("cutoffTime") LocalTime cutoffTime);
+    @Query("""
+        SELECT COUNT(o) FROM Order o
+        WHERE o.store.id = :storeId
+          AND o.paidAt IS NOT NULL
+          AND o.paidAt >= :from
+    """)
+    long countPaidOrdersSince(@Param("storeId") UUID storeId, @Param("from") Instant from);
+
+    long countByUser_IdAndPaidAtIsNotNull(UUID userId);
 }

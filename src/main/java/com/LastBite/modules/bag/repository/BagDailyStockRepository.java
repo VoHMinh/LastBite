@@ -98,11 +98,13 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             FROM bag_daily_stocks s
             JOIN surprise_bags b ON b.id = s.bag_id
             JOIN stores st ON st.id = s.store_id
+            LEFT JOIN store_reliability_stats rs ON rs.store_id = st.id
             WHERE s.date = :date
               AND s.status IN ('ACTIVE', 'SOLD_OUT')
               AND b.status = 'ACTIVE'
               AND st.status = 'ACTIVE'
               AND st.verification_status = 'VERIFIED'
+              AND (rs.suspended_until IS NULL OR rs.suspended_until <= NOW())
               AND b.pickup_end_time > :nowTime
               AND st.lat IS NOT NULL
               AND st.lng IS NOT NULL
@@ -179,11 +181,13 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id
+        LEFT JOIN store_reliability_stats rs ON rs.store_id = st.id
         WHERE s.date = :date
           AND s.status IN ('ACTIVE', 'SOLD_OUT')
           AND b.status = 'ACTIVE'
           AND st.status = 'ACTIVE'
           AND st.verification_status = 'VERIFIED'
+          AND (rs.suspended_until IS NULL OR rs.suspended_until <= NOW())
           AND b.pickup_end_time > :nowTime
           AND (:category IS NULL OR b.category = :category)
           AND (:dietType IS NULL OR b.diet_type = :dietType)
@@ -250,12 +254,14 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id
+        LEFT JOIN store_reliability_stats rs ON rs.store_id = st.id
         WHERE b.id = :bagId
           AND s.date = :date
           AND s.status IN ('ACTIVE', 'SOLD_OUT')
           AND b.status = 'ACTIVE'
           AND st.status = 'ACTIVE'
           AND st.verification_status = 'VERIFIED'
+          AND (rs.suspended_until IS NULL OR rs.suspended_until <= NOW())
           AND b.pickup_end_time > :nowTime
         LIMIT 1
     """, nativeQuery = true)
@@ -309,12 +315,14 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id
+        LEFT JOIN store_reliability_stats rs ON rs.store_id = st.id
         WHERE st.id = :storeId
           AND s.date = :date
           AND s.status IN ('ACTIVE', 'SOLD_OUT')
           AND b.status = 'ACTIVE'
           AND st.status = 'ACTIVE'
           AND st.verification_status = 'VERIFIED'
+          AND (rs.suspended_until IS NULL OR rs.suspended_until <= NOW())
           AND b.pickup_end_time > :nowTime
         ORDER BY
             CASE WHEN (s.quantity - s.reserved - s.sold) <= 0 THEN 1 ELSE 0 END ASC,

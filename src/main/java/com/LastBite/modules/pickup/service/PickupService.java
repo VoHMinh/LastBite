@@ -10,6 +10,7 @@ import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.ledger.service.LedgerService;
 import com.LastBite.modules.merchant.service.StoreAccessService;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.repository.OrderRepository;
@@ -21,6 +22,7 @@ import com.LastBite.modules.pickup.entity.PickupEvent;
 import com.LastBite.modules.pickup.enums.PickupChannel;
 import com.LastBite.modules.pickup.enums.PickupEventType;
 import com.LastBite.modules.pickup.repository.PickupEventRepository;
+import com.LastBite.modules.store.service.StoreReliabilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ import java.util.UUID;
 public class PickupService {
 
     private static final Duration PICKUP_GRACE = Duration.ofMinutes(15);
+    private static final Duration DISPUTE_WINDOW = Duration.ofDays(30);
     private static final List<OrderStatus> NO_SHOW_CANDIDATES = List.of(OrderStatus.PAID, OrderStatus.READY_FOR_PICKUP);
 
     private final OrderRepository orderRepository;
@@ -45,6 +48,8 @@ public class PickupService {
     private final PaymentService paymentService;
     private final LedgerService ledgerService;
     private final OrderStatusHistoryService statusHistoryService;
+    private final NotificationServicePort notificationService;
+    private final StoreReliabilityService reliabilityService;
     private final Clock clock;
 
     @Transactional
@@ -81,6 +86,7 @@ public class PickupService {
         if (payment != null) {
             ledgerService.recordOrderCompleted(order, payment, now);
         }
+        reliabilityService.recordOrderFulfilled(order);
         statusHistoryService.record(order, previous, OrderStatus.PICKED_UP, actor, AuditActorType.MERCHANT,
                 "Merchant confirmed pickup", "channel=" + channel);
         return toResponse(order);
@@ -109,8 +115,11 @@ public class PickupService {
                     .build());
             paymentService.findByOrderId(locked.getId())
                     .ifPresent(payment -> ledgerService.recordOrderCompleted(locked, payment, now));
+            reliabilityService.recordCustomerNoShow(locked);
+            Instant disputeWindowUntil = now.plus(DISPUTE_WINDOW);
+            notificationService.notifyOrderMissedPickup(locked, disputeWindowUntil);
             statusHistoryService.record(locked, previous, OrderStatus.EXPIRED, null, AuditActorType.SYSTEM,
-                    "Pickup no-show", null);
+                    "CUSTOMER_NO_SHOW", "disputeWindowUntil=" + disputeWindowUntil);
             count++;
         }
         return count;

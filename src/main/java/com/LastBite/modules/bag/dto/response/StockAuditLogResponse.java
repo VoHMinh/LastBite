@@ -1,6 +1,7 @@
 package com.LastBite.modules.bag.dto.response;
 
 import com.LastBite.modules.bag.enums.StockAuditAction;
+import com.LastBite.modules.bag.enums.StockAuditActorType;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -17,6 +18,7 @@ public class StockAuditLogResponse {
     private LocalDate stockDate;
     private UUID actorId;
     private String actorEmail;
+    private StockAuditActorType actorType;
     private StockAuditAction action;
     private int delta;
     private int quantityBefore;

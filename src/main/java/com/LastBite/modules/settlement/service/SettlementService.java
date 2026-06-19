@@ -27,6 +27,7 @@ import com.LastBite.modules.payment.gateway.CreatePayoutCommand;
 import com.LastBite.modules.payment.gateway.PayoutGatewayPort;
 import com.LastBite.modules.payment.gateway.PayoutResult;
 import com.LastBite.modules.payment.repository.PaymentGatewayRequestRepository;
+import com.LastBite.modules.refund.enums.RefundStatus;
 import com.LastBite.modules.settlement.dto.request.MarkPayoutFailedRequest;
 import com.LastBite.modules.settlement.dto.request.MarkPayoutPaidRequest;
 import com.LastBite.modules.settlement.dto.response.MerchantPayableBalanceResponse;
@@ -59,6 +60,11 @@ public class SettlementService {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
     private static final String VND = "VND";
+    private static final List<RefundStatus> OPEN_REFUND_STATUSES = List.of(
+            RefundStatus.PENDING_REVIEW,
+            RefundStatus.APPROVED,
+            RefundStatus.PROCESSING,
+            RefundStatus.FAILED);
 
     private final MerchantSettlementRepository settlementRepository;
     private final StorePayoutRepository payoutRepository;
@@ -77,9 +83,10 @@ public class SettlementService {
     public List<SettlementResponse> createWeeklyDrafts(UUID adminId) {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
-        List<LedgerEntry> entries = ledgerEntryRepository.findUnsettledAvailable(
+        List<LedgerEntry> entries = ledgerEntryRepository.findUnsettledSettleableMerchantEntries(
                 LedgerAccountType.MERCHANT_PAYABLE,
-                Instant.now(clock));
+                Instant.now(clock),
+                OPEN_REFUND_STATUSES);
         Map<SettlementKey, List<LedgerEntry>> byStore = entries.stream()
                 .filter(entry -> entry.getOrder() != null)
                 .collect(Collectors.groupingBy(entry -> {
@@ -111,6 +118,13 @@ public class SettlementService {
         settlement.setStatus(MerchantSettlementStatus.APPROVED);
         settlement.setApprovedBy(admin);
         settlement.setApprovedAt(Instant.now(clock));
+        if (settlement.getNetAmount().signum() <= 0) {
+            settlement.setStatus(MerchantSettlementStatus.PAID);
+            settlement.setPaidAt(settlement.getApprovedAt());
+            auditLogService.record(admin, "SETTLEMENT_CLOSE_NON_POSITIVE_NET", "MERCHANT_SETTLEMENT",
+                    settlement.getId(), null, "netAmount=" + settlement.getNetAmount());
+            return toSettlementResponse(settlement);
+        }
         auditLogService.record(admin, "SETTLEMENT_APPROVE", "MERCHANT_SETTLEMENT",
                 settlement.getId(), null, "netAmount=" + settlement.getNetAmount());
         return toSettlementResponse(settlement);
@@ -290,19 +304,32 @@ public class SettlementService {
         BigDecimal net = entries.stream()
                 .map(this::signedAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        Map<UUID, Order> orders = entries.stream()
+        BigDecimal merchantCredit = entries.stream()
+                .filter(entry -> entry.getDirection() == LedgerEntryDirection.CREDIT)
+                .map(LedgerEntry::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal refundAmount = entries.stream()
+                .filter(entry -> entry.getDirection() == LedgerEntryDirection.DEBIT)
+                .map(LedgerEntry::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Map<UUID, Order> grossOrders = entries.stream()
+                .filter(entry -> entry.getDirection() == LedgerEntryDirection.CREDIT)
                 .map(LedgerEntry::getOrder)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Order::getId, order -> order, (left, right) -> left));
-        BigDecimal gross = orders.values().stream()
+        BigDecimal gross = grossOrders.values().stream()
                 .map(Order::getFinalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal commission = gross.subtract(net).max(BigDecimal.ZERO);
-        LocalDate periodStart = orders.values().stream()
+        BigDecimal commission = gross.subtract(merchantCredit).max(BigDecimal.ZERO);
+        LocalDate periodStart = entries.stream()
+                .map(LedgerEntry::getOrder)
+                .filter(Objects::nonNull)
                 .map(Order::getPickupDate)
                 .min(LocalDate::compareTo)
                 .orElse(LocalDate.now(clock));
-        LocalDate periodEnd = orders.values().stream()
+        LocalDate periodEnd = entries.stream()
+                .map(LedgerEntry::getOrder)
+                .filter(Objects::nonNull)
                 .map(Order::getPickupDate)
                 .max(LocalDate::compareTo)
                 .orElse(LocalDate.now(clock));
@@ -314,7 +341,7 @@ public class SettlementService {
                 .periodEnd(periodEnd)
                 .grossAmount(gross)
                 .commissionAmount(commission)
-                .refundAmount(BigDecimal.ZERO)
+                .refundAmount(refundAmount)
                 .netAmount(net)
                 .status(MerchantSettlementStatus.DRAFT)
                 .build());
