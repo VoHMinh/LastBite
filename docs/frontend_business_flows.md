@@ -711,10 +711,14 @@ Nếu order đã `PICKED_UP`, API trả response hiện tại thay vì lỗi. FE
 
 ### No-show
 
-1. Job `PickupLifecycleJob` chạy mỗi 60 giây.
-2. Sau `pickupEndTime + 15 phút`, các order `PAID` hoặc `READY_FOR_PICKUP` bị mark `EXPIRED`.
-3. Backend tạo `pickup_events(NO_SHOW)`.
-4. No-show vẫn gọi `ledgerService.recordOrderCompleted`, nghĩa là merchant vẫn được tính payable nếu không có refund/dispute sau đó.
+1. Job `PickupLifecycleJob` chay moi 60 giay.
+2. Sau `pickupEndTime + 15 phut`, cac order `PAID` hoac `READY_FOR_PICKUP` bi mark `EXPIRED`.
+3. Backend tao `pickup_events(NO_SHOW)`.
+4. No-show van goi `ledgerService.recordOrderCompleted`, nghia la merchant van duoc tinh payable neu khong co refund/dispute sau do.
+5. Backend gui notification `ORDER_MISSED_PICKUP` cho customer. Payload co `disputeWindowUntil`.
+6. Timeline tra ve reason `CUSTOMER_NO_SHOW` va metadata `disputeWindowUntil=...`.
+7. FE khong hien thi auto-refund cho no-show. FE chi mo CTA report/refund neu customer noi store dong cua, khong co hang, sai chat luong, allergen, quantity shortage hoac merchant fault trong 30 ngay.
+8. No-show chi tang reliability metric `total_bags_no_show`; khong tinh la merchant fault mac dinh.
 
 ## 11. Refund, Dispute, Refund Transaction
 
@@ -818,6 +822,12 @@ Auto refund được approve ngay và ghi ledger `REFUND_RESERVED`. Nếu custom
 - `destinationRequired=true` thì FE phải mở form nhập bank destination.
 - Admin manual mark là fallback vận hành, không phải luồng customer tự làm.
 
+### Refund hold before settlement
+
+- Neu order co refund/dispute dang mo voi status `PENDING_REVIEW`, `APPROVED`, `PROCESSING`, `FAILED`, merchant payable cua order do se chua duoc dua vao weekly settlement.
+- Khi refund bi `REJECTED`, payable cua order co the quay lai settlement.
+- Khi refund `REFUNDED`, ledger reversal se tru merchant payable/commission theo ty le refund; settlement sau do se tinh ca adjustment nay.
+- Muc dich: tranh viec platform da chuyen tien cho merchant roi moi phat sinh refund, dan den phai doi tien nguoc lai.
 ## 12. Review, Rating, Review Report
 
 ### Endpoint map
@@ -923,23 +933,35 @@ FE có thể render:
 
 ### Weekly settlement flow
 
-1. Admin gọi `POST /admin/settlements/draft-weekly`.
-2. Backend gom các ledger entries:
+1. Admin goi `POST /admin/settlements/draft-weekly`.
+2. Backend gom cac ledger entries:
    - account type `MERCHANT_PAYABLE`
    - `availableAt <= now`
-   - chưa settlement
-   - có order
-3. Backend group theo business profile + store.
-4. Tạo `merchant_settlements(DRAFT)`.
-5. Admin approve: settlement `APPROVED`.
-6. Admin start payout:
-   - Backend lấy bank account `APPROVED`.
-   - Tạo `store_payouts(PROCESSING)`.
-   - Gọi PayOS payout bằng idempotency key `settlement:{settlementId}:payout:v1`.
-   - Nếu gateway trả state success, payout `PAID`, settlement `PAID`.
-   - Nếu lỗi, payout `FAILED`, settlement `FAILED`.
-7. Admin có thể retry failed payout bằng gọi lại endpoint payout.
-8. Admin có thể manual mark paid/failed.
+   - chua settlement
+   - co order
+   - order khong co refund/dispute dang mo voi status `PENDING_REVIEW`, `APPROVED`, `PROCESSING`, `FAILED`
+3. Refund da `REJECTED` thi order co the settlement binh thuong.
+4. Refund da `REFUNDED` thi backend cho settlement nhung gom ca ledger debit reversal de tru merchant payable.
+5. Backend group theo business profile + store.
+6. Tao `merchant_settlements(DRAFT)` voi `grossAmount`, `commissionAmount`, `refundAmount`, `netAmount` da tinh tu ledger.
+7. Admin approve:
+   - neu `netAmount > 0`, settlement thanh `APPROVED` va co the payout.
+   - neu `netAmount <= 0`, backend dong settlement thanh `PAID`, ghi audit `SETTLEMENT_CLOSE_NON_POSITIVE_NET`, khong goi PayOS payout.
+8. Admin start payout cho settlement `APPROVED`:
+   - Backend lay bank account `APPROVED`.
+   - Tao `store_payouts(PROCESSING)`.
+   - Goi PayOS payout bang idempotency key `settlement:{settlementId}:payout:v1`.
+   - Neu gateway tra state success, payout `PAID`, settlement `PAID`.
+   - Neu loi, payout `FAILED`, settlement `FAILED`.
+9. Admin co the retry failed payout bang goi lai endpoint payout.
+10. Admin co the manual mark paid/failed.
+
+### Merchant reliability impact
+
+- `STORE_CANCELLED`, `STORE_NO_STOCK` va refund duoc approve vi `QUALITY_ISSUE`, `ALLERGEN_OR_LABELING`, `QUANTITY_SHORTAGE` se tinh la store/merchant fault.
+- Customer no-show khong tinh la merchant fault mac dinh.
+- Neu store bi `suspendedUntil > now`, bag cua store se khong hien trong discovery public va order create se bi tu choi.
+- FE/admin co the dung thong tin nay de giai thich vi sao store/bag tam thoi khong con ban duoc.
 
 ### Settlement state
 

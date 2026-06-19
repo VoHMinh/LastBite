@@ -9,6 +9,7 @@ import com.LastBite.modules.bag.entity.BagDailyStock;
 import com.LastBite.modules.bag.entity.StockAuditLog;
 import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.bag.enums.StockAuditAction;
+import com.LastBite.modules.bag.enums.StockAuditActorType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.ledger.service.LedgerService;
@@ -30,8 +31,10 @@ import com.LastBite.modules.payment.repository.PaymentGatewayRequestRepository;
 import com.LastBite.modules.payment.repository.PaymentRepository;
 import com.LastBite.modules.payment.repository.PaymentTransactionRepository;
 import com.LastBite.modules.payment.repository.PaymentWebhookRepository;
+import com.LastBite.modules.promotion.service.VoucherApplicationService;
 import com.LastBite.modules.refund.enums.RefundReason;
 import com.LastBite.modules.refund.service.RefundService;
+import com.LastBite.modules.store.service.StoreReliabilityService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -68,6 +71,8 @@ public class PaymentService {
     private final OrderStatusHistoryService statusHistoryService;
     private final LedgerService ledgerService;
     private final RefundService refundService;
+    private final VoucherApplicationService voucherApplicationService;
+    private final StoreReliabilityService reliabilityService;
     private final Clock clock;
 
     @Transactional
@@ -203,7 +208,8 @@ public class PaymentService {
             if (order == null || order.getStatus() != OrderStatus.PENDING_PAYMENT) {
                 continue;
             }
-            releaseReservedStock(order, "Het han thanh toan");
+            releaseReservedStock(order, "Het han thanh toan", StockAuditActorType.SYSTEM);
+            voucherApplicationService.releaseForOrder(order, "Payment expired before capture");
             OrderStatus previous = order.getStatus();
             order.setStatus(OrderStatus.EXPIRED);
             order.setExpiredAt(now);
@@ -255,9 +261,12 @@ public class PaymentService {
             order.setPaymentExpiresAt(payment.getExpiresAt());
             statusHistoryService.record(order, previous, OrderStatus.PAID, null, AuditActorType.PAYMENT_PROVIDER,
                     "PayOS payment succeeded", "reference=" + reference);
+            voucherApplicationService.redeemForOrder(order);
             ledgerService.recordPaymentCaptured(order, payment);
+            reliabilityService.recordOrderPaid(order);
         } else if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
-            releaseReservedStock(order, "Thanh toan ve tre sau khi het han");
+            releaseReservedStock(order, "Thanh toan ve tre sau khi het han", StockAuditActorType.PAYMENT_PROVIDER);
+            voucherApplicationService.releaseForOrder(order, "Late payment after reservation expiry");
             OrderStatus previous = order.getStatus();
             order.setStatus(OrderStatus.EXPIRED);
             order.setExpiredAt(now);
@@ -282,6 +291,7 @@ public class PaymentService {
                 .bag(order.getBag())
                 .dailyStock(stock)
                 .actor(order.getUser())
+                .actorType(StockAuditActorType.PAYMENT_PROVIDER)
                 .action(StockAuditAction.SELL)
                 .delta(-order.getQuantity())
                 .quantityBefore(availableBefore)
@@ -291,7 +301,7 @@ public class PaymentService {
                 .build());
     }
 
-    private void releaseReservedStock(Order order, String reason) {
+    private void releaseReservedStock(Order order, String reason, StockAuditActorType actorType) {
         BagDailyStock stock = stockRepository.findByBagIdAndDateForUpdate(order.getBag().getId(), order.getPickupDate())
                 .orElseThrow(() -> new ApiException(ErrorCode.STOCK_NOT_FOUND));
         int availableBefore = stock.available();
@@ -303,6 +313,7 @@ public class PaymentService {
                 .bag(order.getBag())
                 .dailyStock(stock)
                 .actor(order.getUser())
+                .actorType(actorType)
                 .action(StockAuditAction.RESERVE_CANCEL)
                 .delta(order.getQuantity())
                 .quantityBefore(availableBefore)

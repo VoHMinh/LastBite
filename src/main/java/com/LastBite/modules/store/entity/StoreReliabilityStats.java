@@ -48,6 +48,14 @@ public class StoreReliabilityStats {
     @Builder.Default
     private int totalBagsNoShow = 0;
 
+    @Column(name = "merchant_cancelled_count", nullable = false)
+    @Builder.Default
+    private int merchantCancelledCount = 0;
+
+    @Column(name = "store_fault_refund_count", nullable = false)
+    @Builder.Default
+    private int storeFaultRefundCount = 0;
+
     @Column(name = "fulfillment_rate", nullable = false)
     @Builder.Default
     private double fulfillmentRate = 1.0;
@@ -62,6 +70,12 @@ public class StoreReliabilityStats {
 
     @Column(name = "suspended_until")
     private Instant suspendedUntil;
+
+    @Column(name = "last_warning_at")
+    private Instant lastWarningAt;
+
+    @Column(name = "last_recalculated_at")
+    private Instant lastRecalculatedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

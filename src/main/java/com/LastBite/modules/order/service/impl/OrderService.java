@@ -15,6 +15,7 @@ import com.LastBite.modules.bag.entity.SurpriseBag;
 import com.LastBite.modules.bag.enums.BagStatus;
 import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.bag.enums.StockAuditAction;
+import com.LastBite.modules.bag.enums.StockAuditActorType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
@@ -28,11 +29,15 @@ import com.LastBite.modules.order.repository.OrderRepository;
 import com.LastBite.modules.order.service.OrderServicePort;
 import com.LastBite.modules.payment.entity.Payment;
 import com.LastBite.modules.payment.service.PaymentService;
+import com.LastBite.modules.promotion.dto.response.VoucherValidationResponse;
+import com.LastBite.modules.promotion.service.VoucherApplicationResult;
+import com.LastBite.modules.promotion.service.VoucherApplicationService;
 import com.LastBite.modules.refund.enums.RefundReason;
 import com.LastBite.modules.refund.service.RefundService;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
 import com.LastBite.modules.store.service.StoreCalendarService;
+import com.LastBite.modules.store.service.StoreReliabilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Pageable;
@@ -62,7 +67,9 @@ public class OrderService implements OrderServicePort {
     private final NotificationServicePort notificationService;
     private final PaymentService paymentService;
     private final RefundService refundService;
+    private final VoucherApplicationService voucherApplicationService;
     private final StoreCalendarService storeCalendarService;
+    private final StoreReliabilityService reliabilityService;
     private final OrderStatusHistoryService statusHistoryService;
     private final Clock clock;
 
@@ -119,13 +126,17 @@ public class OrderService implements OrderServicePort {
                 .idempotencyKey(idempotencyKey)
                 .build();
 
+        order = orderRepository.save(order);
+        VoucherApplicationResult voucher = voucherApplicationService.reserveForOrder(user, bag, subtotal,
+                order, request.getVoucherCode(), request.getUserVoucherId(), reservedUntil);
+        order.setDiscountAmount(voucher.getDiscountAmount());
+        order.setFinalAmount(voucher.getFinalAmount());
+
         int availableBefore = stock.available();
         stock.setReserved(stock.getReserved() + request.getQuantity());
         if (stock.available() <= 0) {
             stock.setStatus(DailyStockStatus.SOLD_OUT);
         }
-
-        order = orderRepository.save(order);
         stockRepository.save(stock);
         writeReserveAudit(bag, stock, user, order.getId(), request.getQuantity(), availableBefore, stock.available());
         statusHistoryService.record(order, null, OrderStatus.PENDING_PAYMENT, user, AuditActorType.CUSTOMER,
@@ -186,6 +197,7 @@ public class OrderService implements OrderServicePort {
         Payment payment = paymentService.findByOrderId(orderId).orElse(null);
         if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
             releaseReservedStock(order, "Khach huy truoc khi thanh toan");
+            voucherApplicationService.releaseForOrder(order, "Customer cancelled before payment");
         } else {
             refundService.createAutoRefund(order, payment, RefundReason.CUSTOMER_COMPLAINT,
                     "Customer cancelled before pickup window");
@@ -210,6 +222,7 @@ public class OrderService implements OrderServicePort {
                 || stock.getStore().getVerificationStatus() != VerificationStatus.VERIFIED) {
             throw new ApiException(ErrorCode.FORBIDDEN, "Cua hang hien chua san sang nhan don");
         }
+        reliabilityService.ensureStoreCanReceiveOrders(stock.getStore());
         if (stock.getStatus() != DailyStockStatus.ACTIVE) {
             throw new ApiException(ErrorCode.STOCK_CONFLICT, "Tui hom nay da het hoac khong con mo ban");
         }
@@ -231,6 +244,7 @@ public class OrderService implements OrderServicePort {
                 .bag(bag)
                 .dailyStock(stock)
                 .actor(actor)
+                .actorType(StockAuditActorType.CUSTOMER)
                 .action(StockAuditAction.RESERVE)
                 .delta(-quantity)
                 .quantityBefore(availableBefore)
@@ -253,6 +267,7 @@ public class OrderService implements OrderServicePort {
                 .bag(order.getBag())
                 .dailyStock(stock)
                 .actor(order.getUser())
+                .actorType(StockAuditActorType.CUSTOMER)
                 .action(StockAuditAction.RESERVE_CANCEL)
                 .delta(order.getQuantity())
                 .quantityBefore(availableBefore)
@@ -275,6 +290,7 @@ public class OrderService implements OrderServicePort {
     }
 
     private OrderResponse toResponse(Order order, Payment payment, String pickupQrToken) {
+        VoucherValidationResponse voucher = order.getId() == null ? null : voucherApplicationService.snapshotForOrder(order.getId());
         return OrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
@@ -290,6 +306,14 @@ public class OrderService implements OrderServicePort {
                 .subtotal(order.getSubtotal())
                 .discountAmount(order.getDiscountAmount())
                 .finalAmount(order.getFinalAmount())
+                .voucherCampaignId(voucher == null ? null : voucher.getCampaignId())
+                .voucherCodeId(voucher == null ? null : voucher.getVoucherCodeId())
+                .userVoucherId(voucher == null ? null : voucher.getUserVoucherId())
+                .voucherCode(voucher == null ? null : voucher.getVoucherCode())
+                .voucherCampaignName(voucher == null ? null : voucher.getCampaignName())
+                .voucherFundingSource(voucher == null ? null : voucher.getFundingSource())
+                .platformFundedDiscountAmount(voucher == null ? BigDecimal.ZERO : voucher.getPlatformFundedAmount())
+                .merchantFundedDiscountAmount(voucher == null ? BigDecimal.ZERO : voucher.getMerchantFundedAmount())
                 .status(order.getStatus())
                 .refundStatus(order.getRefundStatus())
                 .pickupCode(order.getPickupCode())

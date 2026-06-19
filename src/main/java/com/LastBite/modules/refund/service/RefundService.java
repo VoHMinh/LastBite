@@ -17,6 +17,7 @@ import com.LastBite.modules.payment.entity.Payment;
 import com.LastBite.modules.payment.enums.PaymentProvider;
 import com.LastBite.modules.payment.enums.PaymentStatus;
 import com.LastBite.modules.payment.repository.PaymentRepository;
+import com.LastBite.modules.promotion.service.VoucherApplicationService;
 import com.LastBite.modules.refund.dto.request.CreateRefundRequest;
 import com.LastBite.modules.refund.dto.request.RefundDestinationRequest;
 import com.LastBite.modules.refund.dto.request.ReviewRefundRequest;
@@ -27,6 +28,7 @@ import com.LastBite.modules.refund.entity.RefundTransaction;
 import com.LastBite.modules.refund.enums.*;
 import com.LastBite.modules.refund.repository.RefundRequestRepository;
 import com.LastBite.modules.refund.repository.RefundTransactionRepository;
+import com.LastBite.modules.store.service.StoreReliabilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -53,6 +55,8 @@ public class RefundService {
     private final LedgerService ledgerService;
     private final AdminAuditLogService auditLogService;
     private final NotificationServicePort notificationService;
+    private final StoreReliabilityService reliabilityService;
+    private final VoucherApplicationService voucherApplicationService;
     private final SensitiveDataCipher cipher;
     private final Clock clock;
 
@@ -102,6 +106,7 @@ public class RefundService {
         order.setRefundStatus(OrderRefundStatus.APPROVED);
         ledgerService.recordRefundApproved(refund);
         ensurePayoutTransactionIfPossible(refund);
+        reliabilityService.recordStoreFaultRefund(order, reason);
         return refund;
     }
 
@@ -111,6 +116,7 @@ public class RefundService {
                 .orElseThrow(() -> new ApiException(ErrorCode.RESOURCE_NOT_FOUND, "Khong tim thay refund request"));
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+        RefundStatus previousStatus = refund.getStatus();
         if (refund.getStatus() != RefundStatus.PENDING_REVIEW && refund.getStatus() != RefundStatus.APPROVED) {
             throw new ApiException(ErrorCode.INVALID_INPUT, "Yeu cau hoan tien khong con o trang thai co the review");
         }
@@ -122,6 +128,9 @@ public class RefundService {
             refund.getOrder().setRefundStatus(OrderRefundStatus.APPROVED);
             ledgerService.recordRefundApproved(refund);
             ensurePayoutTransactionIfPossible(refund);
+            if (previousStatus != RefundStatus.APPROVED) {
+                reliabilityService.recordStoreFaultRefund(refund.getOrder(), refund.getReason());
+            }
         } else {
             refund.setStatus(RefundStatus.REJECTED);
             refund.getOrder().setRefundStatus(OrderRefundStatus.REJECTED);
@@ -365,6 +374,9 @@ public class RefundService {
             payment.setStatus(fullRefund ? PaymentStatus.REFUNDED : PaymentStatus.PARTIALLY_REFUNDED);
         }
         ledgerService.recordRefundPaid(refund, transaction.getAmount());
+        if (fullRefund) {
+            voucherApplicationService.reissueAfterFullRefundIfEligible(order, refund.getReason());
+        }
         notificationService.notifyOrderRefunded(order);
     }
 

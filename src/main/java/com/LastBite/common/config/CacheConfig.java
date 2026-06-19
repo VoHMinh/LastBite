@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -15,31 +16,31 @@ import java.util.Map;
 
 /**
  * Cấu hình Redis cache với TTL riêng cho từng cache.
- * <p>
- * Tên cache:
- * <ul>
- *   <li>{@code user-profile} — 30 min TTL (changes infrequently)</li>
- *   <li>{@code user-addresses} — 30 min TTL</li>
- *   <li>{@code store-detail} — 15 min TTL (includes schedules)</li>
- *   <li>{@code store-by-slug} — 15 min TTL</li>
- *   <li>{@code store-list} — 5 min TTL (search results change often)</li>
- *   <li>{@code bag-discovery} — 60 sec TTL</li>
- *   <li>{@code bag-detail} — 60 sec TTL</li>
- *   <li>{@code store-bags} — 60 sec TTL</li>
- * </ul>
+ *
+ * Spring Cache lưu Java object nội bộ như List DTO và PageImpl. Dùng JDK serializer
+ * để cache hit trả lại đúng object graph, tránh lỗi JSON polymorphic deserialize với
+ * GenericJacksonJsonRedisSerializer trên collection/page framework types.
  */
 @Configuration
 @EnableCaching
 public class CacheConfig {
 
-    @Bean
-    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+    private static final String CACHE_PREFIX_VERSION = "lastbite:cache:v2:";
 
+    @Bean
+    public RedisSerializer<Object> redisCacheValueSerializer() {
+        return new JdkSerializationRedisSerializer(getClass().getClassLoader());
+    }
+
+    @Bean
+    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory,
+                                          RedisSerializer<Object> redisCacheValueSerializer) {
         RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()
+                .computePrefixWith(cacheName -> CACHE_PREFIX_VERSION + cacheName + "::")
                 .serializeKeysWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(RedisSerializer.json()))
+                        .fromSerializer(redisCacheValueSerializer))
                 .disableCachingNullValues()
                 .entryTtl(Duration.ofMinutes(15));
 

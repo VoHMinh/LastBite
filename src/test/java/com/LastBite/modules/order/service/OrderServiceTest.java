@@ -18,12 +18,15 @@ import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.repository.OrderRepository;
 import com.LastBite.modules.order.service.impl.OrderService;
 import com.LastBite.modules.payment.service.PaymentService;
+import com.LastBite.modules.promotion.service.VoucherApplicationService;
+import com.LastBite.modules.promotion.service.VoucherApplicationResult;
 import com.LastBite.modules.refund.service.RefundService;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
 import com.LastBite.modules.store.service.StoreCalendarService;
+import com.LastBite.modules.store.service.StoreReliabilityService;
 import com.LastBite.modules.audit.service.OrderStatusHistoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,7 +54,9 @@ class OrderServiceTest {
     private final NotificationServicePort notificationService = mock(NotificationServicePort.class);
     private final PaymentService paymentService = mock(PaymentService.class);
     private final RefundService refundService = mock(RefundService.class);
+    private final VoucherApplicationService voucherApplicationService = mock(VoucherApplicationService.class);
     private final StoreCalendarService storeCalendarService = mock(StoreCalendarService.class);
+    private final StoreReliabilityService reliabilityService = mock(StoreReliabilityService.class);
     private final OrderStatusHistoryService statusHistoryService = mock(OrderStatusHistoryService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T13:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagPricingService pricingService = new BagPricingService(clock);
@@ -66,7 +71,7 @@ class OrderServiceTest {
     void setUp() {
         service = new OrderService(orderRepository, stockRepository, auditLogRepository,
                 userRepository, pricingService, notificationService, paymentService, refundService,
-                storeCalendarService, statusHistoryService, clock);
+                voucherApplicationService, storeCalendarService, reliabilityService, statusHistoryService, clock);
         userId = UUID.randomUUID();
         bagId = UUID.randomUUID();
         user = User.builder().email("customer@test.com").fullName("Customer Test").build();
@@ -81,6 +86,8 @@ class OrderServiceTest {
         when(paymentService.findByOrderId(any())).thenReturn(Optional.empty());
         when(paymentService.createPaymentForOrder(any())).thenReturn(null);
         when(storeCalendarService.supportsPickupWindow(any(), any(), any(), any())).thenReturn(true);
+        when(voucherApplicationService.reserveForOrder(any(), any(), any(), any(), any(), any(), any()))
+                .thenAnswer(invocation -> VoucherApplicationResult.none(invocation.getArgument(2)));
     }
 
     @Test

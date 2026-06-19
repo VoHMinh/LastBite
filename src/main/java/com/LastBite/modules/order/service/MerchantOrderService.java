@@ -14,6 +14,7 @@ import com.LastBite.modules.bag.entity.BagDailyStock;
 import com.LastBite.modules.bag.entity.StockAuditLog;
 import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.bag.enums.StockAuditAction;
+import com.LastBite.modules.bag.enums.StockAuditActorType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.merchant.service.StoreAccessService;
@@ -25,6 +26,7 @@ import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.repository.OrderRepository;
 import com.LastBite.modules.payment.entity.Payment;
 import com.LastBite.modules.payment.service.PaymentService;
+import com.LastBite.modules.promotion.service.VoucherApplicationService;
 import com.LastBite.modules.pickup.entity.PickupEvent;
 import com.LastBite.modules.pickup.enums.PickupChannel;
 import com.LastBite.modules.pickup.enums.PickupEventType;
@@ -53,6 +55,7 @@ public class MerchantOrderService {
     private final OrderRepository orderRepository;
     private final PaymentService paymentService;
     private final RefundService refundService;
+    private final VoucherApplicationService voucherApplicationService;
     private final StoreAccessService storeAccessService;
     private final UserRepository userRepository;
     private final BagDailyStockRepository stockRepository;
@@ -127,6 +130,7 @@ public class MerchantOrderService {
         Payment payment = paymentService.findByOrderId(order.getId()).orElse(null);
         if (previous == OrderStatus.PENDING_PAYMENT) {
             releaseReservedStock(order, actor, noteOrDefault(request.getNote(), "Merchant cancelled pending order"));
+            voucherApplicationService.releaseForOrder(order, "Merchant cancelled pending order");
         } else {
             refundService.createAutoRefund(order, payment, reason, noteOrDefault(request.getNote(),
                     "Merchant cancelled paid order"));
@@ -181,6 +185,7 @@ public class MerchantOrderService {
                 .bag(order.getBag())
                 .dailyStock(stock)
                 .actor(actor)
+                .actorType(StockAuditActorType.MERCHANT)
                 .action(StockAuditAction.RESERVE_CANCEL)
                 .delta(order.getQuantity())
                 .quantityBefore(availableBefore)

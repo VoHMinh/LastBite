@@ -24,4 +24,9 @@ public class CreateOrderRequest {
     @NotBlank(message = "Idempotency key không được để trống")
     @Size(max = 100, message = "Idempotency key tối đa 100 ký tự")
     private String idempotencyKey;
+
+    @Size(max = 80, message = "Voucher code toi da 80 ky tu")
+    private String voucherCode;
+
+    private UUID userVoucherId;
 }

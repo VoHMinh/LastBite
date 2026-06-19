@@ -5,6 +5,8 @@ import com.LastBite.modules.notification.dto.request.BroadcastNotificationReques
 import com.LastBite.modules.notification.dto.response.BroadcastNotificationResponse;
 import com.LastBite.modules.order.entity.Order;
 
+import java.time.Instant;
+
 public interface NotificationServicePort {
 
     void notifyOrderReserved(Order order);
@@ -14,6 +16,8 @@ public interface NotificationServicePort {
     void notifyOrderCancelled(Order order);
 
     void notifyOrderRefunded(Order order);
+
+    void notifyOrderMissedPickup(Order order, Instant disputeWindowUntil);
 
     void notifyPaymentExpiring(Order order);
 

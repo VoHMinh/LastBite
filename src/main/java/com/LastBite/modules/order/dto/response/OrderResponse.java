@@ -3,6 +3,7 @@ package com.LastBite.modules.order.dto.response;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.enums.OrderRefundStatus;
 import com.LastBite.modules.payment.enums.PaymentStatus;
+import com.LastBite.modules.promotion.enums.VoucherFundingSource;
 import lombok.Builder;
 import lombok.Data;
 
@@ -29,6 +30,14 @@ public class OrderResponse {
     private BigDecimal subtotal;
     private BigDecimal discountAmount;
     private BigDecimal finalAmount;
+    private UUID voucherCampaignId;
+    private UUID voucherCodeId;
+    private UUID userVoucherId;
+    private String voucherCode;
+    private String voucherCampaignName;
+    private VoucherFundingSource voucherFundingSource;
+    private BigDecimal platformFundedDiscountAmount;
+    private BigDecimal merchantFundedDiscountAmount;
     private OrderStatus status;
     private OrderRefundStatus refundStatus;
     private String pickupCode;

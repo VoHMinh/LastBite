@@ -7,6 +7,9 @@ import com.LastBite.modules.ledger.repository.LedgerAccountRepository;
 import com.LastBite.modules.ledger.repository.LedgerEntryRepository;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.payment.entity.Payment;
+import com.LastBite.modules.promotion.entity.VoucherRedemption;
+import com.LastBite.modules.promotion.enums.VoucherRedemptionStatus;
+import com.LastBite.modules.promotion.repository.VoucherRedemptionRepository;
 import com.LastBite.modules.refund.entity.RefundRequest;
 import com.LastBite.modules.settlement.entity.PlatformCommission;
 import com.LastBite.modules.settlement.enums.CommissionStatus;
@@ -31,6 +34,7 @@ public class LedgerService {
     private final LedgerAccountRepository accountRepository;
     private final LedgerEntryRepository entryRepository;
     private final PlatformCommissionRepository commissionRepository;
+    private final VoucherRedemptionRepository voucherRedemptionRepository;
 
     @Transactional
     public void recordPaymentCaptured(Order order, Payment payment) {
@@ -43,6 +47,18 @@ public class LedgerService {
                 "PayOS payment captured for " + order.getOrderNumber());
         credit(escrow, order, payment, null, LedgerEntryType.ESCROW_HELD, payment.getAmount(), null,
                 "Escrow held for " + order.getOrderNumber());
+
+        VoucherRedemption voucher = redeemedVoucher(order);
+        if (voucher != null && voucher.getPlatformFundedAmount().signum() > 0) {
+            LedgerAccount promotionExpense = account(LedgerOwnerType.PLATFORM, null,
+                    LedgerAccountType.PLATFORM_PROMOTION_EXPENSE);
+            debit(promotionExpense, order, payment, null, LedgerEntryType.VOUCHER_SUBSIDY,
+                    voucher.getPlatformFundedAmount(), null,
+                    "Platform-funded voucher subsidy for " + order.getOrderNumber());
+            credit(escrow, order, payment, null, LedgerEntryType.VOUCHER_SUBSIDY,
+                    voucher.getPlatformFundedAmount(), null,
+                    "Escrow top-up for platform-funded voucher " + order.getOrderNumber());
+        }
     }
 
     @Transactional
@@ -50,10 +66,13 @@ public class LedgerService {
         if (entryRepository.existsByOrderIdAndEntryType(order.getId(), LedgerEntryType.MERCHANT_PAYABLE)) {
             return;
         }
+        VoucherRedemption voucher = redeemedVoucher(order);
+        BigDecimal merchantFundedDiscount = voucher == null ? BigDecimal.ZERO : voucher.getMerchantFundedAmount();
+        BigDecimal merchantGross = order.getSubtotal().subtract(merchantFundedDiscount).max(BigDecimal.ZERO);
         BigDecimal commissionAmount = order.getPlatformFee()
                 .multiply(BigDecimal.valueOf(order.getQuantity()))
-                .min(order.getFinalAmount());
-        BigDecimal merchantNet = order.getFinalAmount().subtract(commissionAmount);
+                .min(merchantGross);
+        BigDecimal merchantNet = merchantGross.subtract(commissionAmount);
         Instant availableAt = completedAt.plus(MERCHANT_HOLD_DAYS, ChronoUnit.DAYS);
 
         LedgerAccount escrow = account(LedgerOwnerType.PLATFORM, null, LedgerAccountType.ESCROW);
@@ -63,7 +82,7 @@ public class LedgerService {
                 order.getStore().getBusinessProfile().getId(),
                 LedgerAccountType.MERCHANT_PAYABLE);
 
-        debit(escrow, order, payment, null, LedgerEntryType.MERCHANT_PAYABLE, order.getFinalAmount(), availableAt,
+        debit(escrow, order, payment, null, LedgerEntryType.MERCHANT_PAYABLE, merchantGross, availableAt,
                 "Release escrow for completed order " + order.getOrderNumber());
         credit(revenue, order, payment, null, LedgerEntryType.PLATFORM_COMMISSION, commissionAmount, availableAt,
                 "Platform commission for " + order.getOrderNumber());
@@ -74,7 +93,7 @@ public class LedgerService {
             commissionRepository.save(PlatformCommission.builder()
                     .order(order)
                     .payment(payment)
-                    .grossAmount(order.getFinalAmount())
+                    .grossAmount(merchantGross)
                     .platformFeeAmount(commissionAmount)
                     .merchantNetAmount(merchantNet)
                     .status(CommissionStatus.EARNED)
@@ -129,6 +148,12 @@ public class LedgerService {
                                 LedgerEntryType.REFUND_PAID, amount, Instant.now(), description);
                     }
                 });
+    }
+
+    private VoucherRedemption redeemedVoucher(Order order) {
+        return voucherRedemptionRepository.findByOrderId(order.getId())
+                .filter(voucher -> voucher.getStatus() == VoucherRedemptionStatus.REDEEMED)
+                .orElse(null);
     }
 
     private LedgerAccount account(LedgerOwnerType ownerType, UUID ownerId, LedgerAccountType accountType) {

@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
@@ -116,6 +117,25 @@ public class NotificationService implements NotificationServicePort {
                 order.getId(),
                 orderPayload(order),
                 "ORDER_REFUNDED:" + order.getUser().getId() + ":" + order.getId() + ":" + order.getRefundStatus());
+    }
+
+    @Override
+    @Transactional
+    public void notifyOrderMissedPickup(Order order, Instant disputeWindowUntil) {
+        Map<String, String> payload = orderPayload(order);
+        payload.put("disputeWindowUntil", disputeWindowUntil.toString());
+        createForUser(
+                order.getUser().getId(),
+                NotificationType.ORDER_MISSED_PICKUP,
+                NotificationCategory.PICKUP,
+                "Da qua gio nhan don",
+                "Don " + order.getOrderNumber() + " da qua khung gio pickup. No-show khong duoc auto-hoan tien; neu cua hang co van de, ban co the gui dispute trong 30 ngay.",
+                null,
+                "/orders/" + order.getId(),
+                NotificationReferenceType.ORDER,
+                order.getId(),
+                payload,
+                "ORDER_MISSED_PICKUP:" + order.getUser().getId() + ":" + order.getId());
     }
 
     @Override

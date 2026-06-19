@@ -286,12 +286,21 @@ Table store_reliability_stats {
   total_bags_sold integer [not null, default: 0]
   total_bags_fulfilled integer [not null, default: 0]
   total_bags_no_show integer [not null, default: 0]
+  merchant_cancelled_count integer [not null, default: 0]
+  store_fault_refund_count integer [not null, default: 0]
   fulfillment_rate float [not null, default: 1.0, note: '0..1']
   warning_count integer [not null, default: 0]
   is_under_review boolean [not null, default: false]
   suspended_until timestamptz
+  last_warning_at timestamptz
+  last_recalculated_at timestamptz
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    suspended_until [name: 'idx_store_reliability_suspended_until']
+    is_under_review [name: 'idx_store_reliability_under_review']
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -587,6 +596,7 @@ Table stock_audit_logs {
   bag_id uuid [not null, ref: > surprise_bags.id]
   daily_stock_id uuid [ref: > bag_daily_stocks.id]
   actor_id uuid [ref: > users.id]
+  actor_type varchar(30) [not null, default: 'SYSTEM', note: 'CUSTOMER | MERCHANT | ADMIN | SYSTEM | PAYMENT_PROVIDER']
   action varchar(40) [not null, note: 'STOCK_ADD | STOCK_REDUCE | STOCK_SET | RESERVE | RESERVE_CANCEL | SELL | EXPIRE_UNSOLD']
   delta integer [not null]
   quantity_before integer [not null]
@@ -599,6 +609,7 @@ Table stock_audit_logs {
     bag_id [name: 'idx_stock_audit_logs_bag_id']
     daily_stock_id [name: 'idx_stock_audit_logs_daily_stock_id']
     order_id [name: 'idx_stock_audit_logs_order_id']
+    actor_type [name: 'idx_stock_audit_logs_actor_type']
     created_at [name: 'idx_stock_audit_logs_created_at']
   }
 }
