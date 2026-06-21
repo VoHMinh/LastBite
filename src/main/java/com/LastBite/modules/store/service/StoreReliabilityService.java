@@ -78,7 +78,7 @@ public class StoreReliabilityService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags", "store-list", "store-detail", "store-by-slug"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags", "store-list", "store-detail", "store-by-slug"}, allEntries = true)
     public void recordStoreFaultRefund(Order order, RefundReason reason) {
         if (!isStoreFaultReason(reason)) {
             return;

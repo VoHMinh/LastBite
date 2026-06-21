@@ -1,6 +1,7 @@
 package com.LastBite.modules.bag.repository;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
@@ -19,6 +20,8 @@ public interface BagDiscoveryProjection {
     String getCity();
     Double getLat();
     Double getLng();
+    Instant getStoreCreatedAt();
+    Integer getOrdersTodayCount();
     String getName();
     String getDescription();
     String getBagType();

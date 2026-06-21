@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "weekly-report": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "weekly-report/SKILL.md",
+      "computedHash": "090dc136f2afde6f5904221efa9456b39fe40332a267241d0701a9de4d31039e"
+    }
+  }
+}

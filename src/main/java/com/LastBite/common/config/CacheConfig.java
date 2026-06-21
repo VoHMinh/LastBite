@@ -52,7 +52,9 @@ public class CacheConfig {
                 "store-list", defaults.entryTtl(Duration.ofMinutes(5)),
                 "bag-discovery", defaults.entryTtl(Duration.ofSeconds(60)),
                 "bag-detail", defaults.entryTtl(Duration.ofSeconds(60)),
-                "store-bags", defaults.entryTtl(Duration.ofSeconds(60))
+                "store-bags", defaults.entryTtl(Duration.ofSeconds(60)),
+                "home-discovery", defaults.entryTtl(Duration.ofSeconds(60)),
+                "discovery-config", defaults.entryTtl(Duration.ofMinutes(5))
         );
 
         return RedisCacheManager.builder(connectionFactory)

@@ -4,6 +4,7 @@ import com.LastBite.common.response.PageResponse;
 import com.LastBite.modules.audit.dto.response.OrderStatusHistoryResponse;
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
+import com.LastBite.common.security.SensitiveDataCipher;
 import com.LastBite.common.util.HashUtil;
 import com.LastBite.modules.audit.enums.AuditActorType;
 import com.LastBite.modules.audit.service.OrderStatusHistoryService;
@@ -49,6 +50,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
@@ -71,11 +73,12 @@ public class OrderService implements OrderServicePort {
     private final StoreCalendarService storeCalendarService;
     private final StoreReliabilityService reliabilityService;
     private final OrderStatusHistoryService statusHistoryService;
+    private final SensitiveDataCipher sensitiveDataCipher;
     private final Clock clock;
 
     @Override
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public OrderResponse create(UUID userId, CreateOrderRequest request) {
         String idempotencyKey = request.getIdempotencyKey().trim();
         var existingOrder = orderRepository.findByUser_IdAndIdempotencyKey(userId, idempotencyKey);
@@ -118,6 +121,7 @@ public class OrderService implements OrderServicePort {
                 .pickupCode(pickupCode)
                 .pickupCodeHash(HashUtil.sha256(pickupCode))
                 .pickupQrTokenHash(HashUtil.sha256(pickupQrToken))
+                .pickupQrTokenEncrypted(sensitiveDataCipher.encrypt(pickupQrToken))
                 .pickupDate(today)
                 .pickupStartTime(bag.getPickupStartTime())
                 .pickupEndTime(bag.getPickupEndTime())
@@ -152,7 +156,7 @@ public class OrderService implements OrderServicePort {
     public OrderResponse get(UUID userId, UUID orderId) {
         Order order = orderRepository.findByIdAndUserId(orderId, userId)
                 .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
-        return toResponse(order, paymentService.findByOrderId(orderId).orElse(null), null);
+        return toResponse(order, paymentService.findByOrderId(orderId).orElse(null), decryptPickupQrToken(order));
     }
 
     @Override
@@ -176,7 +180,7 @@ public class OrderService implements OrderServicePort {
 
     @Override
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public OrderResponse cancel(UUID userId, UUID orderId) {
         Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
@@ -189,16 +193,15 @@ public class OrderService implements OrderServicePort {
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT && order.getStatus() != OrderStatus.PAID) {
             throw new ApiException(ErrorCode.INVALID_INPUT, "Don hang khong the huy o trang thai hien tai");
         }
-        if (!LocalTime.now(clock).isBefore(order.getPickupStartTime().minusHours(2))) {
-            throw new ApiException(ErrorCode.INVALID_INPUT, "Chi co the huy truoc gio pickup it nhat 2 tieng");
-        }
-
         OrderStatus previous = order.getStatus();
         Payment payment = paymentService.findByOrderId(orderId).orElse(null);
         if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
+            ensurePendingPaymentCanBeCancelled(order, payment);
             releaseReservedStock(order, "Khach huy truoc khi thanh toan");
             voucherApplicationService.releaseForOrder(order, "Customer cancelled before payment");
+            paymentService.cancelPendingPayment(payment, "Customer cancelled before payment");
         } else {
+            ensurePaidOrderCanBeCancelled(order);
             refundService.createAutoRefund(order, payment, RefundReason.CUSTOMER_COMPLAINT,
                     "Customer cancelled before pickup window");
         }
@@ -287,6 +290,30 @@ public class OrderService implements OrderServicePort {
 
     private String generatePickupQrToken() {
         return "pk_" + UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private void ensurePendingPaymentCanBeCancelled(Order order, Payment payment) {
+        Instant expiresAt = payment != null && payment.getExpiresAt() != null
+                ? payment.getExpiresAt()
+                : order.getPaymentExpiresAt() == null ? order.getReservedUntil() : order.getPaymentExpiresAt();
+        if (expiresAt != null && Instant.now(clock).isAfter(expiresAt)) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Don hang da het han thanh toan");
+        }
+    }
+
+    private void ensurePaidOrderCanBeCancelled(Order order) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime cancelCutoff = LocalDateTime.of(order.getPickupDate(), order.getPickupStartTime()).minusHours(2);
+        if (!now.isBefore(cancelCutoff)) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Chi co the huy truoc gio pickup it nhat 2 tieng");
+        }
+    }
+
+    private String decryptPickupQrToken(Order order) {
+        if (order.getPickupQrTokenEncrypted() == null || order.getPickupQrTokenEncrypted().isBlank()) {
+            return null;
+        }
+        return sensitiveDataCipher.decrypt(order.getPickupQrTokenEncrypted());
     }
 
     private OrderResponse toResponse(Order order, Payment payment, String pickupQrToken) {

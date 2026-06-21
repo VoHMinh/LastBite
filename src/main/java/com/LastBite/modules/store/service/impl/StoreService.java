@@ -129,13 +129,13 @@ public class StoreService implements StoreServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"store-detail", "store-by-slug", "store-list", "bag-discovery", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"store-detail", "store-by-slug", "store-list", "bag-discovery", "home-discovery", "store-bags"}, allEntries = true)
     public StoreDetailResponse updateStore(UUID ownerId, UpdateStoreRequest request) {
         return updateStore(ownerId, firstOwnedStore(ownerId).getId(), request);
     }
 
     @Transactional
-    @CacheEvict(value = {"store-detail", "store-by-slug", "store-list", "bag-discovery", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"store-detail", "store-by-slug", "store-list", "bag-discovery", "home-discovery", "store-bags"}, allEntries = true)
     public StoreDetailResponse updateStore(UUID ownerId, UUID storeId, UpdateStoreRequest request) {
         Store store = ownedStore(ownerId, storeId);
         if (store.getVerificationStatus() == VerificationStatus.VERIFIED
@@ -289,7 +289,7 @@ public class StoreService implements StoreServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"store-detail", "store-by-slug", "store-list", "bag-discovery", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"store-detail", "store-by-slug", "store-list", "bag-discovery", "home-discovery", "store-bags"}, allEntries = true)
     public StoreDetailResponse approveStore(UUID storeId) {
         Store store = getStoreDetail(storeId);
         StoreReviewApplication latestApplication = reviewApplicationRepository

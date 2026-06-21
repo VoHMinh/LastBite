@@ -59,6 +59,24 @@ public class BagPublicController {
                         extractUserId(jwt), lat, lng, radius, category, dietType, bagType, district, sort, limit)));
     }
 
+    @GetMapping("/search")
+    @Operation(summary = "Tim kiem tui voi ranking relevance")
+    public ResponseEntity<ApiResponse<List<PublicBagSummaryResponse>>> search(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng,
+            @RequestParam(required = false, defaultValue = "5") Double radius,
+            @RequestParam(required = false) StoreCategory category,
+            @RequestParam(required = false) DietType dietType,
+            @RequestParam(required = false) BagType bagType,
+            @RequestParam(required = false) String district,
+            @RequestParam(defaultValue = "relevance") String sort,
+            @RequestParam(required = false) Integer limit) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                discoveryService.search(
+                        extractUserId(jwt), q, lat, lng, radius, category, dietType, bagType, district, sort, limit)));
+    }
     @GetMapping("/{bagId}")
     @Operation(summary = "Lấy chi tiết túi hôm nay")
     public ResponseEntity<ApiResponse<PublicBagDetailResponse>> detail(@AuthenticationPrincipal Jwt jwt,
