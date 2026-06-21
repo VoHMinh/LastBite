@@ -107,7 +107,7 @@ public class MerchantOrderService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public MerchantOrderResponse cancel(UUID actorId, UUID storeId, UUID orderId, MerchantCancelOrderRequest request) {
         storeAccessService.require(actorId, storeId, ORDER_ROLES);
         User actor = userRepository.findById(actorId)
@@ -131,6 +131,7 @@ public class MerchantOrderService {
         if (previous == OrderStatus.PENDING_PAYMENT) {
             releaseReservedStock(order, actor, noteOrDefault(request.getNote(), "Merchant cancelled pending order"));
             voucherApplicationService.releaseForOrder(order, "Merchant cancelled pending order");
+            paymentService.cancelPendingPayment(payment, "Merchant cancelled pending order");
         } else {
             refundService.createAutoRefund(order, payment, reason, noteOrDefault(request.getNote(),
                     "Merchant cancelled paid order"));

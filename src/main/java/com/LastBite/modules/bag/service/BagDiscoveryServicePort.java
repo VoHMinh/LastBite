@@ -18,6 +18,10 @@ public interface BagDiscoveryServicePort {
                                              StoreCategory category, DietType dietType, BagType bagType,
                                              String district, String sort, Integer limit);
 
+    List<PublicBagSummaryResponse> search(UUID userId, String keyword, Double lat, Double lng, Double radiusKm,
+                                          StoreCategory category, DietType dietType, BagType bagType,
+                                          String district, String sort, Integer limit);
+
     PublicBagDetailResponse detail(UUID bagId, UUID userId);
 
     List<PublicBagSummaryResponse> storeBags(UUID storeId, Integer limit);

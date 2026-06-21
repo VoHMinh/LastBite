@@ -114,6 +114,9 @@ public class Order extends BaseEntity {
     @Column(name = "pickup_qr_token_hash", length = 128)
     private String pickupQrTokenHash;
 
+    @Column(name = "pickup_qr_token_encrypted", columnDefinition = "TEXT")
+    private String pickupQrTokenEncrypted;
+
     @Column(name = "pickup_code_hash", length = 128)
     private String pickupCodeHash;
 

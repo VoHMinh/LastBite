@@ -112,7 +112,7 @@ public class VoucherApplicationService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public UserVoucherResponse claim(UUID userId, ClaimVoucherRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));

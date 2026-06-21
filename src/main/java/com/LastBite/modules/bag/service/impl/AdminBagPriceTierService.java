@@ -39,7 +39,7 @@ public class AdminBagPriceTierService implements AdminBagPriceTierServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public BagPriceTierResponse create(BagPriceTierRequest request) {
         if (tierRepository.existsByCategoryAndBagSize(request.getCategory(), request.getBagSize())) {
             throw new ApiException(ErrorCode.DUPLICATE_RESOURCE,
@@ -63,7 +63,7 @@ public class AdminBagPriceTierService implements AdminBagPriceTierServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public BagPriceTierResponse update(UUID tierId, UpdateBagPriceTierRequest request) {
         BagPriceTier tier = getTier(tierId);
         StoreCategory category = request.getCategory() == null ? tier.getCategory() : request.getCategory();
@@ -97,7 +97,7 @@ public class AdminBagPriceTierService implements AdminBagPriceTierServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public BagPriceTierResponse activate(UUID tierId) {
         BagPriceTier tier = getTier(tierId);
         tier.setActive(true);
@@ -105,7 +105,7 @@ public class AdminBagPriceTierService implements AdminBagPriceTierServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public BagPriceTierResponse deactivate(UUID tierId) {
         BagPriceTier tier = getTier(tierId);
         tier.setActive(false);

@@ -3,6 +3,7 @@ package com.LastBite.modules.order.repository;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.enums.OrderRefundStatus;
 import com.LastBite.modules.order.enums.OrderStatus;
+import com.LastBite.modules.store.enums.StoreCategory;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -144,4 +145,14 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     long countPaidOrdersSince(@Param("storeId") UUID storeId, @Param("from") Instant from);
 
     long countByUser_IdAndPaidAtIsNotNull(UUID userId);
+    @Query("""
+        SELECT o.bag.category FROM Order o
+        WHERE o.user.id = :userId
+          AND o.paidAt IS NOT NULL
+          AND o.status NOT IN (com.LastBite.modules.order.enums.OrderStatus.CANCELLED,
+                               com.LastBite.modules.order.enums.OrderStatus.REFUNDED)
+        GROUP BY o.bag.category
+        ORDER BY COUNT(o.id) DESC
+    """)
+    List<StoreCategory> findPurchasedCategoriesByUser(@Param("userId") UUID userId);
 }

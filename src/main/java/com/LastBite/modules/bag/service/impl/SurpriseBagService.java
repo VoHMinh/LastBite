@@ -70,14 +70,14 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     private final Clock clock;
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public SurpriseBagResponse create(UUID ownerId, CreateSurpriseBagRequest request) {
         Store store = getReadyStore(ownerId);
         return createForStore(store, request);
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public SurpriseBagResponse create(UUID actorId, UUID storeId, CreateSurpriseBagRequest request) {
         Store store = storeAccessService.require(actorId, storeId, java.util.Set.of(UserRole.MANAGER));
         if (store.getStatus() != StoreStatus.ACTIVE || store.getVerificationStatus() != VerificationStatus.VERIFIED) {
@@ -141,7 +141,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public SurpriseBagResponse update(UUID ownerId, UUID bagId, UpdateSurpriseBagRequest request) {
         SurpriseBag bag = getOwnedBag(ownerId, bagId);
         ensureNotArchived(bag);
@@ -175,7 +175,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public void softDelete(UUID ownerId, UUID bagId) {
         SurpriseBag bag = getOwnedBag(ownerId, bagId);
         bag.setStatus(BagStatus.ARCHIVED);
@@ -184,7 +184,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public SurpriseBagResponse pause(UUID ownerId, UUID bagId) {
         SurpriseBag bag = getOwnedBag(ownerId, bagId);
         ensureNotArchived(bag);
@@ -193,7 +193,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public SurpriseBagResponse resume(UUID ownerId, UUID bagId) {
         SurpriseBag bag = getOwnedBag(ownerId, bagId);
         ensureNotArchived(bag);
@@ -202,7 +202,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public DailyStockResponse setStock(UUID ownerId, UUID bagId, LocalDate date, SetDailyStockRequest request) {
         SurpriseBag bag = getOwnedBag(ownerId, bagId);
         ensureNotArchived(bag);
@@ -237,7 +237,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public DailyStockResponse adjustTodayStock(UUID ownerId, UUID bagId, AdjustTodayStockRequest request) {
         if (request.getDelta() == 0) {
             throw new ApiException(ErrorCode.INVALID_INPUT, "Số lượng điều chỉnh phải khác 0");
@@ -288,7 +288,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public int createTodayStocks() {
         LocalDate today = LocalDate.now(clock);
         List<SurpriseBag> bags = bagRepository.findActiveBagsMissingStockForDate(today);
@@ -313,7 +313,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public int expireUnsoldStocks() {
         LocalDate today = LocalDate.now(clock);
         var now = java.time.LocalTime.now(clock);

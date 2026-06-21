@@ -141,7 +141,7 @@ public class PaymentService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public void handlePayOsWebhook(PayOsWebhookRequest request) {
         boolean valid = signatureService.verifyWebhook(request.getData(), request.getSignature());
         Long providerOrderCode = longValue(request.getData().get("orderCode"));
@@ -199,7 +199,7 @@ public class PaymentService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public int expirePendingPayments() {
         Instant now = Instant.now(clock);
         int expired = 0;
@@ -228,6 +228,21 @@ public class PaymentService {
 
     public Optional<Payment> findByOrderId(UUID orderId) {
         return paymentRepository.findByOrderId(orderId);
+    }
+
+    @Transactional
+    public void cancelPendingPayment(Payment payment, String reason) {
+        if (payment == null || payment.getStatus() != PaymentStatus.PENDING) {
+            return;
+        }
+        payment.setStatus(PaymentStatus.CANCELLED);
+        payment.setCancelledAt(Instant.now(clock));
+        payment.setFailureReason(reason);
+        try {
+            paymentGateway.cancelPaymentLink(payment.getProviderOrderCode(), reason);
+        } catch (Exception ex) {
+            log.warn("Cannot cancel PayOS payment link {}", payment.getProviderOrderCode(), ex);
+        }
     }
 
     private void applySuccessfulPayment(Payment payment, String reference, PayOsWebhookRequest request) {

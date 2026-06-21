@@ -5,8 +5,11 @@ import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagDiscoveryProjection;
+import com.LastBite.modules.bag.service.impl.BagDiscoveryMapper;
 import com.LastBite.modules.bag.service.impl.BagDiscoveryService;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
+import com.LastBite.modules.discovery.repository.PlatformConfigRepository;
+import com.LastBite.modules.discovery.service.DiscoveryRankingService;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.user.entity.UserDiscoveryPreference;
 import com.LastBite.modules.user.enums.CollectionTimeSlot;
@@ -27,24 +30,33 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyDouble;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class BagDiscoveryServiceTest {
 
     private final BagDailyStockRepository stockRepository = mock(BagDailyStockRepository.class);
     private final FavoriteStoreRepository favoriteStoreRepository = mock(FavoriteStoreRepository.class);
     private final UserDiscoveryPreferenceRepository discoveryPreferenceRepository = mock(UserDiscoveryPreferenceRepository.class);
+    private final PlatformConfigRepository platformConfigRepository = mock(PlatformConfigRepository.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
+    private final BagPricingService pricingService = new BagPricingService(clock);
+    private final BagDiscoveryMapper mapper = new BagDiscoveryMapper(favoriteStoreRepository, pricingService, clock);
+    private final DiscoveryRankingService rankingService = new DiscoveryRankingService(platformConfigRepository, clock);
     private final BagDiscoveryService service = new BagDiscoveryService(
-            stockRepository, favoriteStoreRepository, discoveryPreferenceRepository, new BagPricingService(clock), clock);
+            stockRepository, discoveryPreferenceRepository, mapper, rankingService, clock);
 
     @Test
     void discoverPassesDietAndBagTypeFiltersToRepository() {
         BagDiscoveryProjection projection = row(DietType.VEGETARIAN, BagType.MEAL);
-        when(stockRepository.discoverWithoutLocation(
+        when(stockRepository.findDiscoveryCandidatesWithoutLocation(
                 any(), any(), any(), any(), any(), any(), any(), anyInt()))
                 .thenReturn(List.of(projection));
 
@@ -61,14 +73,14 @@ class BagDiscoveryServiceTest {
         assertTrue(results.getFirst().isCarrierBagProvided());
         assertEquals("Bring your own bag if possible.", results.getFirst().getPackagingNote());
         assertFalse(results.getFirst().isFavoriteStore());
-        verify(stockRepository).discoverWithoutLocation(
+        verify(stockRepository).findDiscoveryCandidatesWithoutLocation(
                 LocalDate.of(2026, 5, 25),
                 LocalTime.of(10, 0),
                 "CAFE",
                 "VEGETARIAN",
                 "MEAL",
                 "Quan 1",
-                "pickup_time",
+                null,
                 10);
     }
 
@@ -96,13 +108,13 @@ class BagDiscoveryServiceTest {
         when(discoveryPreferenceRepository.findByUserId(userId))
                 .thenReturn(Optional.of(preference(PreferredDiet.NOT_SPECIFIED, Set.of(), 43.0481, -76.1474, 22.5)));
         BagDiscoveryProjection projection = row(DietType.MEAT, BagType.MEAL);
-        when(stockRepository.discoverWithLocation(
+        when(stockRepository.findDiscoveryCandidatesWithLocation(
                 any(), any(), anyDouble(), anyDouble(), anyDouble(), any(), any(), any(), any(), any(), anyInt()))
                 .thenReturn(List.of(projection));
 
         service.discover(userId, null, null, 5.0, null, null, null, null, "pickup_time", 10);
 
-        verify(stockRepository).discoverWithLocation(
+        verify(stockRepository).findDiscoveryCandidatesWithLocation(
                 LocalDate.of(2026, 5, 25),
                 LocalTime.of(10, 0),
                 43.0481,
@@ -112,7 +124,7 @@ class BagDiscoveryServiceTest {
                 null,
                 null,
                 null,
-                "pickup_time",
+                null,
                 10);
     }
 
@@ -122,13 +134,13 @@ class BagDiscoveryServiceTest {
         when(discoveryPreferenceRepository.findByUserId(userId))
                 .thenReturn(Optional.of(preference(PreferredDiet.NOT_SPECIFIED, Set.of(), 43.0481, -76.1474, 22.5)));
         BagDiscoveryProjection projection = row(DietType.MEAT, BagType.MEAL);
-        when(stockRepository.discoverWithLocation(
+        when(stockRepository.findDiscoveryCandidatesWithLocation(
                 any(), any(), anyDouble(), anyDouble(), anyDouble(), any(), any(), any(), any(), any(), anyInt()))
                 .thenReturn(List.of(projection));
 
         service.discover(userId, 10.0, 20.0, 7.0, null, null, null, null, "pickup_time", 10);
 
-        verify(stockRepository).discoverWithLocation(
+        verify(stockRepository).findDiscoveryCandidatesWithLocation(
                 LocalDate.of(2026, 5, 25),
                 LocalTime.of(10, 0),
                 10.0,
@@ -138,7 +150,7 @@ class BagDiscoveryServiceTest {
                 null,
                 null,
                 null,
-                "pickup_time",
+                null,
                 10);
     }
 
@@ -150,7 +162,7 @@ class BagDiscoveryServiceTest {
                         Set.of(CollectionTimeSlot.EVENING), null, null, null)));
         BagDiscoveryProjection meatRow = row(DietType.MEAT, BagType.MEAL, LocalTime.of(18, 0), LocalTime.of(19, 0));
         BagDiscoveryProjection veganRow = row(DietType.VEGAN, BagType.MEAL, LocalTime.of(20, 0), LocalTime.of(21, 0));
-        when(stockRepository.discoverWithoutLocation(
+        when(stockRepository.findDiscoveryCandidatesWithoutLocation(
                 any(), any(), any(), any(), any(), any(), any(), anyInt()))
                 .thenReturn(List.of(meatRow, veganRow));
 
@@ -158,14 +170,34 @@ class BagDiscoveryServiceTest {
 
         assertEquals(DietType.VEGAN, results.getFirst().getDietType());
         assertEquals(DietType.MEAT, results.get(1).getDietType());
-        verify(stockRepository).discoverWithoutLocation(
+        verify(stockRepository).findDiscoveryCandidatesWithoutLocation(
                 LocalDate.of(2026, 5, 25),
                 LocalTime.of(10, 0),
                 null,
                 null,
                 null,
                 null,
-                "pickup_time",
+                null,
+                50);
+    }
+
+    @Test
+    void searchPassesKeywordPatternAndUsesWideCandidatePoolForRelevance() {
+        BagDiscoveryProjection projection = row(DietType.MEAT, BagType.MEAL);
+        when(stockRepository.findDiscoveryCandidatesWithoutLocation(
+                any(), any(), any(), any(), any(), any(), any(), anyInt()))
+                .thenReturn(List.of(projection));
+
+        service.search(null, "bread", null, null, 5.0, null, null, null, null, "relevance", 10);
+
+        verify(stockRepository).findDiscoveryCandidatesWithoutLocation(
+                LocalDate.of(2026, 5, 25),
+                LocalTime.of(10, 0),
+                null,
+                null,
+                null,
+                null,
+                "%bread%",
                 50);
     }
 
@@ -209,6 +241,7 @@ class BagDiscoveryServiceTest {
         when(row.getReserved()).thenReturn(0);
         when(row.getSold()).thenReturn(0);
         when(row.getAvailable()).thenReturn(3);
+        when(row.getOrdersTodayCount()).thenReturn(0);
         return row;
     }
 

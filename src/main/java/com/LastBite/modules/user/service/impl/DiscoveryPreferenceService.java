@@ -42,7 +42,7 @@ public class DiscoveryPreferenceService implements DiscoveryPreferenceServicePor
 
     @Override
     @Transactional
-    @CacheEvict(value = "bag-discovery", allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery"}, allEntries = true)
     public DiscoveryPreferenceResponse update(UUID userId, UpdateDiscoveryPreferenceRequest request) {
         UserDiscoveryPreference preference = preferenceRepository.findByUserId(userId)
                 .orElseGet(() -> newPreference(userId));
@@ -59,7 +59,7 @@ public class DiscoveryPreferenceService implements DiscoveryPreferenceServicePor
 
     @Override
     @Transactional
-    @CacheEvict(value = "bag-discovery", allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery"}, allEntries = true)
     public DiscoveryPreferenceResponse skipOnboarding(UUID userId) {
         UserDiscoveryPreference preference = preferenceRepository.findByUserId(userId)
                 .orElseGet(() -> newPreference(userId));

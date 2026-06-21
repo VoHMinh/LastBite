@@ -76,7 +76,7 @@ public class VoucherCampaignService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public VoucherCampaignResponse updateAdmin(UUID actorId, UUID campaignId, VoucherCampaignUpsertRequest request) {
         User actor = user(actorId);
         VoucherCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
@@ -104,7 +104,7 @@ public class VoucherCampaignService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public VoucherCampaignResponse publishAdmin(UUID actorId, UUID campaignId) {
         User actor = user(actorId);
         VoucherCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
@@ -116,7 +116,7 @@ public class VoucherCampaignService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public VoucherCampaignResponse pauseAdmin(UUID actorId, UUID campaignId) {
         User actor = user(actorId);
         VoucherCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
@@ -128,7 +128,7 @@ public class VoucherCampaignService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public VoucherCampaignResponse endAdmin(UUID actorId, UUID campaignId) {
         User actor = user(actorId);
         VoucherCampaign campaign = campaignRepository.findByIdForUpdate(campaignId)
@@ -198,7 +198,7 @@ public class VoucherCampaignService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public VoucherCampaignResponse updateMerchant(UUID actorId, UUID storeId, UUID campaignId,
                                                   VoucherCampaignUpsertRequest request) {
         Store store = storeAccessService.require(actorId, storeId, CAMPAIGN_ROLES);
@@ -214,7 +214,7 @@ public class VoucherCampaignService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public VoucherCampaignResponse publishMerchant(UUID actorId, UUID storeId, UUID campaignId) {
         storeAccessService.require(actorId, storeId, CAMPAIGN_ROLES);
         User actor = user(actorId);
@@ -233,7 +233,7 @@ public class VoucherCampaignService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public VoucherCampaignResponse pauseMerchant(UUID actorId, UUID storeId, UUID campaignId) {
         storeAccessService.require(actorId, storeId, CAMPAIGN_ROLES);
         User actor = user(actorId);
@@ -245,7 +245,7 @@ public class VoucherCampaignService {
     }
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public VoucherCampaignResponse endMerchant(UUID actorId, UUID storeId, UUID campaignId) {
         storeAccessService.require(actorId, storeId, CAMPAIGN_ROLES);
         User actor = user(actorId);

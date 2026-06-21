@@ -53,7 +53,7 @@ public class PickupService {
     private final Clock clock;
 
     @Transactional
-    @CacheEvict(value = {"bag-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public PickupResponse confirm(UUID actorId, ConfirmPickupRequest request) {
         Order order = orderRepository.findByIdForUpdate(request.getOrderId())
                 .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));

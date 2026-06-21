@@ -10,6 +10,7 @@ import com.LastBite.modules.user.entity.FavoriteStore;
 import com.LastBite.modules.user.repository.FavoriteStoreRepository;
 import com.LastBite.modules.user.service.FavoriteStoreServicePort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,7 @@ public class FavoriteStoreService implements FavoriteStoreServicePort {
     }
 
     @Transactional
+    @CacheEvict(value = {"bag-discovery", "home-discovery"}, allEntries = true)
     public StoreResponse add(UUID userId, UUID storeId) {
         return favoriteStoreRepository.findByUserIdAndStoreId(userId, storeId)
                 .map(FavoriteStore::getStore)
@@ -42,6 +44,7 @@ public class FavoriteStoreService implements FavoriteStoreServicePort {
     }
 
     @Transactional
+    @CacheEvict(value = {"bag-discovery", "home-discovery"}, allEntries = true)
     public void delete(UUID userId, UUID storeId) {
         favoriteStoreRepository.deleteByUserIdAndStoreId(userId, storeId);
     }
