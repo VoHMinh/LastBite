@@ -17,7 +17,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +28,6 @@ import java.util.UUID;
 public class MerchantOrderController {
 
     private final MerchantOrderService merchantOrderService;
-    private final Clock clock;
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<MerchantOrderResponse>>> list(
@@ -42,7 +40,7 @@ public class MerchantOrderController {
         var pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100),
                 Sort.by(Sort.Direction.ASC, "pickupStartTime").and(Sort.by(Sort.Direction.DESC, "createdAt")));
         return ResponseEntity.ok(ApiResponse.ok(merchantOrderService.list(userId(jwt), storeId,
-                date == null ? LocalDate.now(clock) : date, status, pageable)));
+                date, status, pageable)));
     }
 
     @GetMapping("/{orderId}")
