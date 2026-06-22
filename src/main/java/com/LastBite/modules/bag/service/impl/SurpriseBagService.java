@@ -310,6 +310,11 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public List<com.LastBite.modules.store.enums.StoreCategory> listAvailableCategories() {
+        return priceTierRepository.findDistinctActiveCategoriesOrderByCategory();
+    }
+
     @Transactional
     @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public int createTodayStocks() {

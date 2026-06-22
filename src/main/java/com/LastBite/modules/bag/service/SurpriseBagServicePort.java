@@ -42,6 +42,8 @@ public interface SurpriseBagServicePort {
 
     List<BagPriceTierSummaryResponse> listActivePriceTiers(StoreCategory category);
 
+    List<StoreCategory> listAvailableCategories();
+
     int createTodayStocks();
 
     int expireUnsoldStocks();

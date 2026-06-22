@@ -4,6 +4,7 @@ import com.LastBite.modules.bag.entity.BagPriceTier;
 import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.store.enums.StoreCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,4 +21,7 @@ public interface BagPriceTierRepository extends JpaRepository<BagPriceTier, UUID
     List<BagPriceTier> findByActiveTrueOrderByCategoryAscBagSizeAsc();
 
     List<BagPriceTier> findByCategoryAndActiveTrueOrderByBagSizeAsc(StoreCategory category);
+
+    @Query("SELECT DISTINCT t.category FROM BagPriceTier t WHERE t.active = true ORDER BY t.category")
+    List<StoreCategory> findDistinctActiveCategoriesOrderByCategory();
 }

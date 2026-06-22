@@ -123,13 +123,19 @@ public class MerchantBagController {
         return ResponseEntity.ok(ApiResponse.ok(bagService.auditLogs(extractUserId(jwt), bagId, pageable)));
     }
 
+    @GetMapping("/price-tiers/categories")
+    @Operation(summary = "Danh sách danh mục đang có gói giá",
+            description = "Bước 1: Lấy danh sách category mà Admin đã cấu hình gói giá. "
+                    + "Cửa hàng chọn 1 category trước, rồi gọi /price-tiers?category=X để xem giá.")
+    public ResponseEntity<ApiResponse<List<StoreCategory>>> priceTierCategories() {
+        return ResponseEntity.ok(ApiResponse.ok(bagService.listAvailableCategories()));
+    }
+
     @GetMapping("/price-tiers")
-    @Operation(summary = "Danh sách gói giá túi đang active",
-            description = "Lấy các gói giá (BagPriceTier) mà nền tảng đã cấu hình. "
-                    + "Dùng để hiển thị cho cửa hàng chọn loại túi khi tạo SurpriseBag. "
-                    + "Có thể lọc theo category của cửa hàng.")
+    @Operation(summary = "Danh sách gói giá theo danh mục",
+            description = "Bước 2: Sau khi chọn category, gọi API này để lấy các size túi và giá tương ứng.")
     public ResponseEntity<ApiResponse<List<BagPriceTierSummaryResponse>>> priceTiers(
-            @RequestParam(required = false) StoreCategory category) {
+            @RequestParam StoreCategory category) {
         return ResponseEntity.ok(ApiResponse.ok(bagService.listActivePriceTiers(category)));
     }
 
