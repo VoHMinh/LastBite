@@ -6,10 +6,12 @@ import com.LastBite.modules.bag.dto.request.AdjustTodayStockRequest;
 import com.LastBite.modules.bag.dto.request.CreateSurpriseBagRequest;
 import com.LastBite.modules.bag.dto.request.SetDailyStockRequest;
 import com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest;
+import com.LastBite.modules.bag.dto.response.BagPriceTierSummaryResponse;
 import com.LastBite.modules.bag.dto.response.DailyStockResponse;
 import com.LastBite.modules.bag.dto.response.StockAuditLogResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
 import com.LastBite.modules.bag.service.SurpriseBagServicePort;
+import com.LastBite.modules.store.enums.StoreCategory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +27,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -118,6 +121,22 @@ public class MerchantBagController {
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "createdAt"));
         return ResponseEntity.ok(ApiResponse.ok(bagService.auditLogs(extractUserId(jwt), bagId, pageable)));
+    }
+
+    @GetMapping("/price-tiers/categories")
+    @Operation(summary = "Danh sách danh mục đang có gói giá",
+            description = "Bước 1: Lấy danh sách category mà Admin đã cấu hình gói giá. "
+                    + "Cửa hàng chọn 1 category trước, rồi gọi /price-tiers?category=X để xem giá.")
+    public ResponseEntity<ApiResponse<List<StoreCategory>>> priceTierCategories() {
+        return ResponseEntity.ok(ApiResponse.ok(bagService.listAvailableCategories()));
+    }
+
+    @GetMapping("/price-tiers")
+    @Operation(summary = "Danh sách gói giá theo danh mục",
+            description = "Bước 2: Sau khi chọn category, gọi API này để lấy các size túi và giá tương ứng.")
+    public ResponseEntity<ApiResponse<List<BagPriceTierSummaryResponse>>> priceTiers(
+            @RequestParam StoreCategory category) {
+        return ResponseEntity.ok(ApiResponse.ok(bagService.listActivePriceTiers(category)));
     }
 
     private UUID extractUserId(Jwt jwt) {

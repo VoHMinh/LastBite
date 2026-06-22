@@ -9,6 +9,7 @@ import com.LastBite.modules.bag.dto.request.AdjustTodayStockRequest;
 import com.LastBite.modules.bag.dto.request.CreateSurpriseBagRequest;
 import com.LastBite.modules.bag.dto.request.SetDailyStockRequest;
 import com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest;
+import com.LastBite.modules.bag.dto.response.BagPriceTierSummaryResponse;
 import com.LastBite.modules.bag.dto.response.DailyStockResponse;
 import com.LastBite.modules.bag.dto.response.StockAuditLogResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
@@ -285,6 +286,33 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                 .map(this::toAuditResponse);
         return new PageResponse<>(page.getContent(), page.getNumber(), page.getSize(),
                 page.getTotalElements(), page.getTotalPages());
+    }
+
+    @Transactional(readOnly = true)
+    public List<BagPriceTierSummaryResponse> listActivePriceTiers(
+            com.LastBite.modules.store.enums.StoreCategory category) {
+        List<BagPriceTier> tiers = category == null
+                ? priceTierRepository.findByActiveTrueOrderByCategoryAscBagSizeAsc()
+                : priceTierRepository.findByCategoryAndActiveTrueOrderByBagSizeAsc(category);
+        return tiers.stream().map(this::toTierSummary).toList();
+    }
+
+    private BagPriceTierSummaryResponse toTierSummary(BagPriceTier tier) {
+        return BagPriceTierSummaryResponse.builder()
+                .id(tier.getId())
+                .category(tier.getCategory())
+                .bagSize(tier.getBagSize())
+                .minimumValue(tier.getMinimumValue())
+                .baseSalePrice(tier.getBaseSalePrice())
+                .dynamicMinPrice(tier.getDynamicMinPrice())
+                .dynamicMaxPrice(tier.getDynamicMaxPrice())
+                .platformFee(tier.getPlatformFee())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.LastBite.modules.store.enums.StoreCategory> listAvailableCategories() {
+        return priceTierRepository.findDistinctActiveCategoriesOrderByCategory();
     }
 
     @Transactional
