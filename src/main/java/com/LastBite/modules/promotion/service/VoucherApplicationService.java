@@ -10,6 +10,7 @@ import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.repository.OrderRepository;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.promotion.dto.request.ClaimVoucherRequest;
 import com.LastBite.modules.promotion.dto.request.ValidateVoucherRequest;
 import com.LastBite.modules.promotion.dto.response.UserVoucherResponse;
@@ -59,6 +60,7 @@ public class VoucherApplicationService {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final BagPricingService pricingService;
+    private final NotificationServicePort notificationService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -132,6 +134,7 @@ public class VoucherApplicationService {
                 .status(UserVoucherStatus.CLAIMED)
                 .expiresAt(earliestExpiry(campaign, code))
                 .build());
+        notificationService.notifyVoucherAvailable(userVoucher);
         return toUserVoucherResponse(userVoucher);
     }
 
@@ -272,13 +275,14 @@ public class VoucherApplicationService {
             redemption.getCode().setRedeemedCount(Math.max(0, redemption.getCode().getRedeemedCount() - 1));
         }
         if (campaign.getEndsAt().isAfter(now)) {
-            userVoucherRepository.save(UserVoucher.builder()
+            UserVoucher reissued = userVoucherRepository.save(UserVoucher.builder()
                     .user(order.getUser())
                     .campaign(campaign)
                     .code(redemption.getCode())
                     .status(UserVoucherStatus.CLAIMED)
                     .expiresAt(earliestExpiry(campaign, redemption.getCode()))
                     .build());
+            notificationService.notifyVoucherAvailable(reissued);
             redemption.setReissuedAt(now);
         }
         redemption.setStatus(VoucherRedemptionStatus.CANCELLED);

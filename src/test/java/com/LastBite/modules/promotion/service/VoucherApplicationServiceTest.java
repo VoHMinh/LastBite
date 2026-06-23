@@ -11,6 +11,7 @@ import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.repository.OrderRepository;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.promotion.dto.request.ValidateVoucherRequest;
 import com.LastBite.modules.promotion.entity.VoucherCampaign;
 import com.LastBite.modules.promotion.entity.VoucherCode;
@@ -49,6 +50,7 @@ class VoucherApplicationServiceTest {
     private final SurpriseBagRepository bagRepository = mock(SurpriseBagRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final OrderRepository orderRepository = mock(OrderRepository.class);
+    private final NotificationServicePort notificationService = mock(NotificationServicePort.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-06-19T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagPricingService pricingService = new BagPricingService(clock);
 
@@ -64,7 +66,7 @@ class VoucherApplicationServiceTest {
     @BeforeEach
     void setUp() {
         service = new VoucherApplicationService(campaignRepository, codeRepository, userVoucherRepository,
-                redemptionRepository, bagRepository, userRepository, orderRepository, pricingService, clock);
+                redemptionRepository, bagRepository, userRepository, orderRepository, pricingService, notificationService, clock);
         userId = UUID.randomUUID();
         bagId = UUID.randomUUID();
         user = User.builder().email("customer@test.com").fullName("Customer").build();

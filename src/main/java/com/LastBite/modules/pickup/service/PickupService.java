@@ -40,6 +40,7 @@ public class PickupService {
     private static final Duration PICKUP_GRACE = Duration.ofMinutes(15);
     private static final Duration DISPUTE_WINDOW = Duration.ofDays(30);
     private static final List<OrderStatus> NO_SHOW_CANDIDATES = List.of(OrderStatus.PAID, OrderStatus.READY_FOR_PICKUP);
+    private static final Set<Integer> IMPACT_MILESTONES = Set.of(10, 25, 50, 100);
 
     private final OrderRepository orderRepository;
     private final PickupEventRepository pickupEventRepository;
@@ -89,6 +90,12 @@ public class PickupService {
         reliabilityService.recordOrderFulfilled(order);
         statusHistoryService.record(order, previous, OrderStatus.PICKED_UP, actor, AuditActorType.MERCHANT,
                 "Merchant confirmed pickup", "channel=" + channel);
+        notificationService.notifyOrderPickedUp(order);
+        notificationService.notifyMerchantOrderPickedUp(order);
+        long savedMeals = orderRepository.countByUser_IdAndStatus(order.getUser().getId(), OrderStatus.PICKED_UP);
+        if (savedMeals <= Integer.MAX_VALUE && IMPACT_MILESTONES.contains((int) savedMeals)) {
+            notificationService.notifyImpactMilestone(order.getUser(), (int) savedMeals);
+        }
         return toResponse(order);
     }
 
@@ -118,6 +125,7 @@ public class PickupService {
             reliabilityService.recordCustomerNoShow(locked);
             Instant disputeWindowUntil = now.plus(DISPUTE_WINDOW);
             notificationService.notifyOrderMissedPickup(locked, disputeWindowUntil);
+            notificationService.notifyMerchantOrderExpired(locked);
             statusHistoryService.record(locked, previous, OrderStatus.EXPIRED, null, AuditActorType.SYSTEM,
                     "CUSTOMER_NO_SHOW", "disputeWindowUntil=" + disputeWindowUntil);
             count++;

@@ -22,6 +22,7 @@ import com.LastBite.modules.merchant.repository.ReviewFeedbackItemRepository;
 import com.LastBite.modules.merchant.repository.StoreVersionRepository;
 import com.LastBite.modules.merchant.repository.MerchantBusinessProfileVersionRepository;
 import com.LastBite.modules.merchant.service.MerchantBusinessProfileService;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.LastBite.modules.store.dto.request.*;
@@ -59,6 +60,7 @@ public class StoreService implements StoreServicePort {
     private final StoreVersionRepository storeVersionRepository;
     private final MerchantBusinessProfileVersionRepository businessProfileVersionRepository;
     private final MerchantBusinessProfileService businessProfileService;
+    private final NotificationServicePort notificationService;
 
     @Transactional
     public Store createStoreInternal(User owner, CreateStoreRequest request) {
@@ -270,7 +272,9 @@ public class StoreService implements StoreServicePort {
                 .submittedBy(userRepository.getReferenceById(ownerId))
                 .submittedAt(Instant.now())
                 .build());
-        return toDetailResponse(storeRepository.save(store));
+        Store saved = storeRepository.save(store);
+        notificationService.notifyAdminStorePendingReview(saved);
+        return toDetailResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -314,7 +318,9 @@ public class StoreService implements StoreServicePort {
             application.setReviewedAt(Instant.now());
             reviewApplicationRepository.save(application);
         });
-        return toDetailResponse(storeRepository.save(store));
+        Store saved = storeRepository.save(store);
+        notificationService.notifyMerchantStoreApproved(saved);
+        return toDetailResponse(saved);
     }
 
     @Transactional
@@ -334,7 +340,9 @@ public class StoreService implements StoreServicePort {
                 store.setRejectionReason(reason.trim());
             }
         });
-        return toDetailResponse(storeRepository.save(store));
+        Store saved = storeRepository.save(store);
+        notificationService.notifyMerchantStoreRejected(saved, reason);
+        return toDetailResponse(saved);
     }
 
     @Transactional

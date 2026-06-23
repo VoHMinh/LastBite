@@ -147,6 +147,7 @@ public class OrderService implements OrderServicePort {
                 "Customer reserved surprise bag", null);
         Payment payment = paymentService.createPaymentForOrder(order);
         notificationService.notifyOrderReserved(order);
+        notificationService.notifyMerchantStockLow(stock);
 
         return toResponse(order, payment, pickupQrToken);
     }

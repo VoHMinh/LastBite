@@ -190,7 +190,9 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         SurpriseBag bag = getOwnedBag(ownerId, bagId);
         ensureNotArchived(bag);
         bag.setStatus(BagStatus.PAUSED);
-        return toBagResponse(bagRepository.save(bag), findTodayStock(bagId));
+        SurpriseBag saved = bagRepository.save(bag);
+        notificationService.notifyMerchantBagPaused(saved);
+        return toBagResponse(saved, findTodayStock(bagId));
     }
 
     @Transactional
@@ -199,7 +201,9 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         SurpriseBag bag = getOwnedBag(ownerId, bagId);
         ensureNotArchived(bag);
         bag.setStatus(BagStatus.ACTIVE);
-        return toBagResponse(bagRepository.save(bag), findTodayStock(bagId));
+        SurpriseBag saved = bagRepository.save(bag);
+        notificationService.notifyMerchantBagResumed(saved);
+        return toBagResponse(saved, findTodayStock(bagId));
     }
 
     @Transactional
