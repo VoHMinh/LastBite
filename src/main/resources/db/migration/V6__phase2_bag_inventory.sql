@@ -3,6 +3,8 @@
 --  Tables: bag_price_tiers, surprise_bags, bag_daily_stocks, orders, stock_audit_logs
 -- ============================================================================
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE IF NOT EXISTS bag_price_tiers (
     id                       UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     category                 VARCHAR(50)   NOT NULL,
@@ -33,32 +35,57 @@ CREATE TABLE IF NOT EXISTS bag_price_tiers (
     )
 );
 
+-- Some VPS databases may already have this table from Hibernate/schema previews.
+-- CREATE TABLE IF NOT EXISTS then skips the definition above, so repair the
+-- defaults needed by raw SQL seed data before inserting the pricing tiers.
+ALTER TABLE IF EXISTS bag_price_tiers
+    ALTER COLUMN id SET DEFAULT gen_random_uuid(),
+    ALTER COLUMN created_at SET DEFAULT NOW(),
+    ALTER COLUMN updated_at SET DEFAULT NOW();
+
+UPDATE bag_price_tiers
+SET id = gen_random_uuid()
+WHERE id IS NULL;
+
+UPDATE bag_price_tiers
+SET created_at = COALESCE(created_at, NOW()),
+    updated_at = COALESCE(updated_at, NOW())
+WHERE created_at IS NULL OR updated_at IS NULL;
+
+ALTER TABLE IF EXISTS bag_price_tiers
+    ALTER COLUMN id SET NOT NULL,
+    ALTER COLUMN created_at SET NOT NULL,
+    ALTER COLUMN updated_at SET NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bag_price_tiers_category_size
+    ON bag_price_tiers(category, bag_size);
+
 CREATE INDEX IF NOT EXISTS idx_bag_price_tiers_active ON bag_price_tiers(active);
 
 INSERT INTO bag_price_tiers (
-    category, bag_size, minimum_value, base_sale_price,
-    dynamic_min_price, dynamic_max_price, platform_fee, active
+    id, category, bag_size, minimum_value, base_sale_price,
+    dynamic_min_price, dynamic_max_price, platform_fee, active, created_at, updated_at
 ) VALUES
-    ('BAKERY', 'MINI', 50000, 19000, 17000, 23000, 4000, TRUE),
-    ('BAKERY', 'SMALL', 75000, 29000, 25000, 35000, 4000, TRUE),
-    ('BAKERY', 'STANDARD', 100000, 39000, 35000, 45000, 4000, TRUE),
-    ('BAKERY', 'LARGE', 150000, 59000, 52000, 69000, 4000, TRUE),
-    ('CAFE', 'MINI', 50000, 19000, 17000, 23000, 4000, TRUE),
-    ('CAFE', 'SMALL', 75000, 29000, 25000, 35000, 4000, TRUE),
-    ('CAFE', 'STANDARD', 100000, 39000, 35000, 45000, 4000, TRUE),
-    ('CAFE', 'LARGE', 150000, 59000, 52000, 69000, 4000, TRUE),
-    ('RESTAURANT', 'MINI', 70000, 29000, 25000, 35000, 4000, TRUE),
-    ('RESTAURANT', 'SMALL', 100000, 39000, 35000, 45000, 4000, TRUE),
-    ('RESTAURANT', 'STANDARD', 150000, 59000, 52000, 69000, 4000, TRUE),
-    ('RESTAURANT', 'LARGE', 220000, 89000, 79000, 99000, 4000, TRUE),
-    ('GROCERY', 'MINI', 60000, 24000, 21000, 29000, 4000, TRUE),
-    ('GROCERY', 'SMALL', 90000, 35000, 31000, 42000, 4000, TRUE),
-    ('GROCERY', 'STANDARD', 130000, 49000, 44000, 59000, 4000, TRUE),
-    ('GROCERY', 'LARGE', 200000, 79000, 69000, 89000, 4000, TRUE),
-    ('CONVENIENCE', 'MINI', 60000, 24000, 21000, 29000, 4000, TRUE),
-    ('CONVENIENCE', 'SMALL', 90000, 35000, 31000, 42000, 4000, TRUE),
-    ('CONVENIENCE', 'STANDARD', 130000, 49000, 44000, 59000, 4000, TRUE),
-    ('CONVENIENCE', 'LARGE', 200000, 79000, 69000, 89000, 4000, TRUE)
+    (gen_random_uuid(), 'BAKERY', 'MINI', 50000, 19000, 17000, 23000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'BAKERY', 'SMALL', 75000, 29000, 25000, 35000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'BAKERY', 'STANDARD', 100000, 39000, 35000, 45000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'BAKERY', 'LARGE', 150000, 59000, 52000, 69000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'CAFE', 'MINI', 50000, 19000, 17000, 23000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'CAFE', 'SMALL', 75000, 29000, 25000, 35000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'CAFE', 'STANDARD', 100000, 39000, 35000, 45000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'CAFE', 'LARGE', 150000, 59000, 52000, 69000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'RESTAURANT', 'MINI', 70000, 29000, 25000, 35000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'RESTAURANT', 'SMALL', 100000, 39000, 35000, 45000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'RESTAURANT', 'STANDARD', 150000, 59000, 52000, 69000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'RESTAURANT', 'LARGE', 220000, 89000, 79000, 99000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'GROCERY', 'MINI', 60000, 24000, 21000, 29000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'GROCERY', 'SMALL', 90000, 35000, 31000, 42000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'GROCERY', 'STANDARD', 130000, 49000, 44000, 59000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'GROCERY', 'LARGE', 200000, 79000, 69000, 89000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'CONVENIENCE', 'MINI', 60000, 24000, 21000, 29000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'CONVENIENCE', 'SMALL', 90000, 35000, 31000, 42000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'CONVENIENCE', 'STANDARD', 130000, 49000, 44000, 59000, 4000, TRUE, NOW(), NOW()),
+    (gen_random_uuid(), 'CONVENIENCE', 'LARGE', 200000, 79000, 69000, 89000, 4000, TRUE, NOW(), NOW())
 ON CONFLICT (category, bag_size) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS surprise_bags (
