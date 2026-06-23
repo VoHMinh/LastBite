@@ -145,6 +145,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     long countPaidOrdersSince(@Param("storeId") UUID storeId, @Param("from") Instant from);
 
     long countByUser_IdAndPaidAtIsNotNull(UUID userId);
+
+    long countByUser_IdAndStatus(UUID userId, OrderStatus status);
     @Query("""
         SELECT o.bag.category FROM Order o
         WHERE o.user.id = :userId

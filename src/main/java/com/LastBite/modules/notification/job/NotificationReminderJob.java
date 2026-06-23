@@ -3,6 +3,9 @@ package com.LastBite.modules.notification.job;
 import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.repository.OrderRepository;
+import com.LastBite.modules.store.enums.StoreStatus;
+import com.LastBite.modules.store.enums.VerificationStatus;
+import com.LastBite.modules.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,6 +29,7 @@ public class NotificationReminderJob {
     );
 
     private final OrderRepository orderRepository;
+    private final StoreRepository storeRepository;
     private final NotificationServicePort notificationService;
     private final Clock clock;
 
@@ -74,6 +78,16 @@ public class NotificationReminderJob {
         var orders = orderRepository.findPickupStartingSoon(PICKUP_REMINDER_STATUSES, today, nowTime, threshold);
         for (var order : orders) {
             notificationService.notifyPickupReminder(order, minutesBefore);
+        }
+    }
+    @Scheduled(cron = "0 0 20 * * *", zone = "Asia/Ho_Chi_Minh")
+    public void sendMerchantStockSetupReminders() {
+        var stores = storeRepository.findAllByStatusAndVerificationStatus(StoreStatus.ACTIVE, VerificationStatus.VERIFIED);
+        for (var store : stores) {
+            notificationService.notifyMerchantSetStockReminder(store);
+        }
+        if (!stores.isEmpty()) {
+            log.info("Queued {} merchant stock setup reminder notification batch(es)", stores.size());
         }
     }
 }

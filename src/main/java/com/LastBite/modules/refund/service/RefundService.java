@@ -387,6 +387,7 @@ public class RefundService {
         transaction.setProcessedAt(Instant.now(clock));
         RefundRequest refund = transaction.getRefundRequest();
         refund.setStatus(RefundStatus.FAILED);
+        notificationService.notifyAdminRefundRequired(refund.getOrder(), failureReason);
     }
 
     private boolean isFullRefund(RefundRequest refund, BigDecimal amount) {

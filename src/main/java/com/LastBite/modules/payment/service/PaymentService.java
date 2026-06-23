@@ -16,6 +16,7 @@ import com.LastBite.modules.ledger.service.LedgerService;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.repository.OrderRepository;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.payment.config.PaymentProperties;
 import com.LastBite.modules.payment.dto.request.PayOsWebhookRequest;
 import com.LastBite.modules.payment.entity.Payment;
@@ -72,6 +73,7 @@ public class PaymentService {
     private final LedgerService ledgerService;
     private final RefundService refundService;
     private final VoucherApplicationService voucherApplicationService;
+    private final NotificationServicePort notificationService;
     private final StoreReliabilityService reliabilityService;
     private final Clock clock;
 
@@ -187,6 +189,7 @@ public class PaymentService {
         } else {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason(request.getDesc());
+            notificationService.notifyPaymentFailed(payment.getOrder());
         }
         webhook.setProcessed(true);
         webhook.setProcessedAt(Instant.now(clock));
@@ -221,6 +224,7 @@ public class PaymentService {
             }
             statusHistoryService.record(order, previous, OrderStatus.EXPIRED, null, AuditActorType.SYSTEM,
                     "Payment reservation expired", null);
+            notificationService.notifyOrderExpired(order);
             expired++;
         }
         return expired;
@@ -279,6 +283,8 @@ public class PaymentService {
             voucherApplicationService.redeemForOrder(order);
             ledgerService.recordPaymentCaptured(order, payment);
             reliabilityService.recordOrderPaid(order);
+            notificationService.notifyPaymentSuccess(order);
+            notificationService.notifyMerchantNewPaidOrder(order);
         } else if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
             releaseReservedStock(order, "Thanh toan ve tre sau khi het han", StockAuditActorType.PAYMENT_PROVIDER);
             voucherApplicationService.releaseForOrder(order, "Late payment after reservation expiry");
@@ -287,6 +293,7 @@ public class PaymentService {
             order.setExpiredAt(now);
             statusHistoryService.record(order, previous, OrderStatus.EXPIRED, null, AuditActorType.SYSTEM,
                     "Late PayOS webhook after reservation expiry", null);
+            notificationService.notifyOrderExpired(order);
             refundService.createAutoRefund(order, payment, RefundReason.PAYMENT_AFTER_EXPIRY,
                     "Thanh toan PayOS thanh cong sau khi reservation da het han");
         } else if (order.getStatus() == OrderStatus.EXPIRED || order.getStatus() == OrderStatus.CANCELLED) {

@@ -10,6 +10,7 @@ import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.bag.entity.SurpriseBag;
 import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.merchant.service.StoreAccessService;
+import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.promotion.dto.request.AddVoucherCodesRequest;
 import com.LastBite.modules.promotion.dto.request.VoucherCampaignUpsertRequest;
 import com.LastBite.modules.promotion.dto.response.VoucherCampaignAnalyticsResponse;
@@ -49,6 +50,7 @@ public class VoucherCampaignService {
     private final UserRepository userRepository;
     private final StoreAccessService storeAccessService;
     private final AdminAuditLogService auditLogService;
+    private final NotificationServicePort notificationService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -100,6 +102,9 @@ public class VoucherCampaignService {
         campaign.setApprovedAt(Instant.now(clock));
         auditLogService.record(actor, "VOUCHER_CAMPAIGN_APPROVE", "VOUCHER_CAMPAIGN", campaign.getId(),
                 "Admin approved campaign", "funding=" + campaign.getFundingSource());
+        if (campaign.getStore() != null) {
+            notificationService.notifyMerchantCampaignStarted(campaign, campaign.getStore());
+        }
         return toCampaignResponse(campaign);
     }
 

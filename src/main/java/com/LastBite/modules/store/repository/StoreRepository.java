@@ -2,6 +2,7 @@ package com.LastBite.modules.store.repository;
 
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreCategory;
+import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +43,8 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
 
     @EntityGraph(value = "Store.withSchedules")
     Page<Store> findAllByVerificationStatus(VerificationStatus verificationStatus, Pageable pageable);
+
+    List<Store> findAllByStatusAndVerificationStatus(StoreStatus status, VerificationStatus verificationStatus);
 
     /** Tìm cửa hàng: chỉ VERIFIED + ACTIVE, có bộ lọc tùy chọn. */
     @Query("""
