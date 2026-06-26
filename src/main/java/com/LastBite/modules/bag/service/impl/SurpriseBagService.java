@@ -30,6 +30,7 @@ import com.LastBite.modules.bag.service.SurpriseBagServicePort;
 import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.merchant.service.StoreAccessService;
 import com.LastBite.modules.auth.enums.UserRole;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
@@ -68,6 +69,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     private final BagPricingService pricingService;
     private final NotificationServicePort notificationService;
     private final StoreAccessService storeAccessService;
+    private final MediaUrlService mediaUrlService;
     private final Clock clock;
 
     @Transactional
@@ -491,7 +493,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                 .dietType(bag.getDietType())
                 .category(bag.getCategory())
                 .bagSize(bag.getBagSize())
-                .photos(bag.getPhotos() == null ? List.of() : Arrays.asList(bag.getPhotos()))
+                .photos(bag.getPhotos() == null ? List.of() : mediaUrlService.resolveUrls(Arrays.asList(bag.getPhotos())))
                 .minimumValue(bag.getMinimumValue())
                 .baseSalePrice(bag.getBaseSalePrice())
                 .currentSalePrice(price.currentSalePrice())

@@ -16,10 +16,11 @@ public class AwsS3Config {
             @Value("${app.aws.s3.region}") String region,
             @Value("${app.aws.s3.bucket-name}") String bucketName,
             @Value("${app.aws.s3.upload-expire-seconds}") long uploadExpireSeconds,
+            @Value("${app.aws.s3.access-expire-seconds}") long accessExpireSeconds,
             @Value("${app.aws.s3.max-image-size-mb}") long maxImageSizeMb,
             @Value("${app.aws.s3.max-video-size-mb}") long maxVideoSizeMb,
             @Value("${app.aws.s3.public-base-url}") String publicBaseUrl) {
-        return new AwsS3Properties(region, bucketName, uploadExpireSeconds,
+        return new AwsS3Properties(region, bucketName, uploadExpireSeconds, accessExpireSeconds,
                 maxImageSizeMb, maxVideoSizeMb, publicBaseUrl);
     }
 

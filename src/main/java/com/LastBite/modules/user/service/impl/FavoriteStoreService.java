@@ -2,6 +2,7 @@ package com.LastBite.modules.user.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.store.dto.response.StoreResponse;
 import com.LastBite.modules.store.entity.Store;
@@ -24,6 +25,7 @@ public class FavoriteStoreService implements FavoriteStoreServicePort {
     private final FavoriteStoreRepository favoriteStoreRepository;
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
+    private final MediaUrlService mediaUrlService;
 
     @Transactional(readOnly = true)
     public List<StoreResponse> list(UUID userId) {
@@ -74,8 +76,8 @@ public class FavoriteStoreService implements FavoriteStoreServicePort {
                 .city(store.getCity())
                 .lat(store.getLat())
                 .lng(store.getLng())
-                .coverImageUrl(store.getCoverImageUrl())
-                .logoUrl(store.getLogoUrl())
+                .coverImageUrl(mediaUrlService.resolveUrl(store.getCoverImageKey(), store.getCoverImageUrl()))
+                .logoUrl(mediaUrlService.resolveUrl(store.getLogoKey(), store.getLogoUrl()))
                 .status(store.getStatus())
                 .verificationStatus(store.getVerificationStatus())
                 .avgRating(store.getAvgRating())

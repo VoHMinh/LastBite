@@ -4,6 +4,7 @@ public record AwsS3Properties(
         String region,
         String bucketName,
         long uploadExpireSeconds,
+        long accessExpireSeconds,
         long maxImageSizeMb,
         long maxVideoSizeMb,
         String publicBaseUrl

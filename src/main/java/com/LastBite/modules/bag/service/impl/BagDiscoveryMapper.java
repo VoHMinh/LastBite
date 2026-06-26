@@ -6,6 +6,7 @@ import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.repository.BagDiscoveryProjection;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.user.repository.FavoriteStoreRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class BagDiscoveryMapper {
 
     private final FavoriteStoreRepository favoriteStoreRepository;
     private final BagPricingService pricingService;
+    private final MediaUrlService mediaUrlService;
     private final Clock clock;
 
     public PublicBagSummaryResponse toSummary(BagDiscoveryProjection row, UUID userId) {
@@ -42,8 +44,8 @@ public class BagDiscoveryMapper {
                 .storeName(row.getStoreName())
                 .storeSlug(row.getStoreSlug())
                 .storeAddress(row.getStoreAddress())
-                .storeLogoUrl(row.getStoreLogoUrl())
-                .storeCoverImageUrl(row.getStoreCoverImageUrl())
+                .storeLogoUrl(mediaUrlService.resolveUrl(row.getStoreLogoUrl()))
+                .storeCoverImageUrl(mediaUrlService.resolveUrl(row.getStoreCoverImageUrl()))
                 .storeAvgRating(row.getStoreAvgRating())
                 .storeTotalRatings(row.getStoreTotalRatings())
                 .favoriteStore(isFavoriteStore(userId, row.getStoreId()))
@@ -140,7 +142,8 @@ public class BagDiscoveryMapper {
         if (value == null || value.isBlank()) return List.of();
         return Arrays.stream(value.split(","))
                 .filter(photo -> !photo.isBlank())
-                .map(String::trim)
+                .map(photo -> mediaUrlService.resolveUrl(photo.trim()))
+                .filter(photo -> photo != null && !photo.isBlank())
                 .toList();
     }
 
