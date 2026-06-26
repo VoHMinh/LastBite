@@ -10,6 +10,7 @@ import com.LastBite.modules.bag.service.impl.BagDiscoveryService;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
 import com.LastBite.modules.discovery.repository.PlatformConfigRepository;
 import com.LastBite.modules.discovery.service.DiscoveryRankingService;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.user.entity.UserDiscoveryPreference;
 import com.LastBite.modules.user.enums.CollectionTimeSlot;
@@ -48,13 +49,16 @@ class BagDiscoveryServiceTest {
     private final PlatformConfigRepository platformConfigRepository = mock(PlatformConfigRepository.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagPricingService pricingService = new BagPricingService(clock);
-    private final BagDiscoveryMapper mapper = new BagDiscoveryMapper(favoriteStoreRepository, pricingService, clock);
+    private final MediaUrlService mediaUrlService = mock(MediaUrlService.class);
+    private final BagDiscoveryMapper mapper = new BagDiscoveryMapper(
+            favoriteStoreRepository, pricingService, mediaUrlService, clock);
     private final DiscoveryRankingService rankingService = new DiscoveryRankingService(platformConfigRepository, clock);
     private final BagDiscoveryService service = new BagDiscoveryService(
             stockRepository, discoveryPreferenceRepository, mapper, rankingService, clock);
 
     @Test
     void discoverPassesDietAndBagTypeFiltersToRepository() {
+        mockMediaUrls();
         BagDiscoveryProjection projection = row(DietType.VEGETARIAN, BagType.MEAL);
         when(stockRepository.findDiscoveryCandidatesWithoutLocation(
                 any(), any(), any(), any(), any(), any(), any(), anyInt()))
@@ -86,6 +90,7 @@ class BagDiscoveryServiceTest {
 
     @Test
     void detailMarksFavoriteStoreForAuthenticatedUser() {
+        mockMediaUrls();
         UUID bagId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         BagDiscoveryProjection projection = row(DietType.VEGETARIAN, BagType.MEAL);
@@ -104,6 +109,7 @@ class BagDiscoveryServiceTest {
 
     @Test
     void discoverUsesSavedLocationWhenRequestDoesNotSendLatLng() {
+        mockMediaUrls();
         UUID userId = UUID.randomUUID();
         when(discoveryPreferenceRepository.findByUserId(userId))
                 .thenReturn(Optional.of(preference(PreferredDiet.NOT_SPECIFIED, Set.of(), 43.0481, -76.1474, 22.5)));
@@ -130,6 +136,7 @@ class BagDiscoveryServiceTest {
 
     @Test
     void discoverRequestLocationOverridesSavedLocation() {
+        mockMediaUrls();
         UUID userId = UUID.randomUUID();
         when(discoveryPreferenceRepository.findByUserId(userId))
                 .thenReturn(Optional.of(preference(PreferredDiet.NOT_SPECIFIED, Set.of(), 43.0481, -76.1474, 22.5)));
@@ -156,6 +163,7 @@ class BagDiscoveryServiceTest {
 
     @Test
     void discoverSoftRanksDietAndCollectionTimePreferencesWithoutFilteringOthers() {
+        mockMediaUrls();
         UUID userId = UUID.randomUUID();
         when(discoveryPreferenceRepository.findByUserId(userId))
                 .thenReturn(Optional.of(preference(PreferredDiet.VEGAN,
@@ -183,6 +191,7 @@ class BagDiscoveryServiceTest {
 
     @Test
     void searchPassesKeywordPatternAndUsesWideCandidatePoolForRelevance() {
+        mockMediaUrls();
         BagDiscoveryProjection projection = row(DietType.MEAT, BagType.MEAL);
         when(stockRepository.findDiscoveryCandidatesWithoutLocation(
                 any(), any(), any(), any(), any(), any(), any(), anyInt()))
@@ -243,6 +252,10 @@ class BagDiscoveryServiceTest {
         when(row.getAvailable()).thenReturn(3);
         when(row.getOrdersTodayCount()).thenReturn(0);
         return row;
+    }
+
+    private void mockMediaUrls() {
+        when(mediaUrlService.resolveUrl(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     private UserDiscoveryPreference preference(PreferredDiet preferredDiet,

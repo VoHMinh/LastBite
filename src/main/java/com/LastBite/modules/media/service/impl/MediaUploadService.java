@@ -45,6 +45,7 @@ public class MediaUploadService implements MediaUploadServicePort {
     private final MerchantStoreMemberRepository memberRepository;
     private final MerchantDocumentRepository documentRepository;
     private final MediaStorageServicePort storageService;
+    private final MediaUrlService mediaUrlService;
     private final AwsS3Properties s3Properties;
     private final Clock clock;
 
@@ -80,7 +81,7 @@ public class MediaUploadService implements MediaUploadServicePort {
                         upload.getBucket(), key, contentType,
                         Duration.ofSeconds(s3Properties.uploadExpireSeconds())))
                 .key(key)
-                .publicUrl(publicUrl)
+                .publicUrl(upload.isPrivateObject() ? null : mediaUrlService.signedUrlForKey(key))
                 .expiresInSeconds(s3Properties.uploadExpireSeconds())
                 .build();
     }
@@ -258,7 +259,9 @@ public class MediaUploadService implements MediaUploadServicePort {
                 .targetType(upload.getTargetType())
                 .targetId(upload.getTargetId())
                 .key(upload.getObjectKey())
-                .publicUrl(upload.getPublicUrl())
+                .publicUrl(upload.isPrivateObject()
+                        ? null
+                        : mediaUrlService.resolveUrl(upload.getObjectKey(), upload.getPublicUrl()))
                 .contentType(upload.getContentType())
                 .fileSize(upload.getFileSize())
                 .status(upload.getStatus())

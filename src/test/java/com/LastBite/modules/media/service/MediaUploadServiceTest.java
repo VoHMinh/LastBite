@@ -57,8 +57,9 @@ class MediaUploadServiceTest {
     private final MerchantDocumentRepository documentRepository =
             mock(MerchantDocumentRepository.class);
     private final MediaStorageServicePort storageService = mock(MediaStorageServicePort.class);
+    private final MediaUrlService mediaUrlService = mock(MediaUrlService.class);
     private final AwsS3Properties properties = new AwsS3Properties(
-            "ap-southeast-1", "lastbite", 300, 5, 50, "https://lastbite.s3.amazonaws.com");
+            "ap-southeast-1", "lastbite", 300, 3600, 5, 50, "https://lastbite.s3.amazonaws.com");
     private final Clock clock = Clock.fixed(
             Instant.parse("2026-06-02T03:00:00Z"), ZoneId.of("UTC"));
 
@@ -71,7 +72,7 @@ class MediaUploadServiceTest {
     void setUp() {
         service = new MediaUploadService(
                 mediaUploadRepository, userRepository, storeRepository, profileRepository,
-                memberRepository, documentRepository, storageService, properties, clock);
+                memberRepository, documentRepository, storageService, mediaUrlService, properties, clock);
         ownerId = UUID.randomUUID();
         owner = merchantOwner();
         owner.setId(ownerId);
@@ -97,6 +98,8 @@ class MediaUploadServiceTest {
         when(storeRepository.findDetailById(store.getId())).thenReturn(Optional.of(store));
         when(storageService.createPresignedPutUrl(any(), any(), any(), any()))
                 .thenReturn("https://signed-url");
+        when(mediaUrlService.signedUrlForKey(any())).thenReturn("https://signed-get-url");
+        when(mediaUrlService.resolveUrl(any(), any())).thenReturn("https://signed-get-url");
         when(mediaUploadRepository.save(any(MediaUpload.class))).thenAnswer(invocation -> {
             MediaUpload upload = invocation.getArgument(0);
             if (upload.getId() == null) upload.setId(UUID.randomUUID());

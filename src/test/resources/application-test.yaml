@@ -36,6 +36,7 @@ app:
     s3:
       region: ap-southeast-1
       bucket-name: lastbite
+      access-expire-seconds: 3600
       upload-expire-seconds: 300
       max-image-size-mb: 5
       max-video-size-mb: 50

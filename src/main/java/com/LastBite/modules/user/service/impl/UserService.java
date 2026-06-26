@@ -5,6 +5,7 @@ import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.modules.auth.dto.response.UserResponse;
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.repository.UserRepository;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.user.dto.request.ChangePasswordRequest;
 import com.LastBite.modules.user.dto.request.UpdateProfileRequest;
 import com.LastBite.modules.user.service.UserServicePort;
@@ -25,6 +26,7 @@ public class UserService implements UserServicePort {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MediaUrlService mediaUrlService;
 
     /**
      * Lấy hồ sơ người dùng (cache Redis 30 phút).
@@ -100,7 +102,7 @@ public class UserService implements UserServicePort {
                 .username(user.getUsername())
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
-                .avatarUrl(user.getAvatarUrl())
+                .avatarUrl(mediaUrlService.resolveUrl(user.getAvatarUrl()))
                 .accountType(user.getAccountType())
                 .roles(user.getRoles().stream().map(role -> role.getCode().name()).sorted().toList())
                 .status(user.getStatus())

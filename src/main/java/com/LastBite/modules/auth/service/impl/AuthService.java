@@ -26,6 +26,7 @@ import com.LastBite.modules.auth.service.AuthServicePort;
 import com.LastBite.modules.auth.service.JwtServicePort;
 import com.LastBite.modules.store.dto.request.CreateStoreRequest;
 import com.LastBite.modules.store.service.StoreServicePort;
+import com.LastBite.modules.media.service.MediaUrlService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,6 +54,7 @@ public class AuthService implements AuthServicePort {
     private final EmailService emailService;
     private final RoleAssignmentService roleAssignmentService;
     private final MerchantStoreMemberRepository storeMemberRepository;
+    private final MediaUrlService mediaUrlService;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int OTP_EXPIRY_MINUTES = 10;
@@ -484,7 +486,7 @@ public class AuthService implements AuthServicePort {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
-                .avatarUrl(user.getAvatarUrl())
+                .avatarUrl(mediaUrlService.resolveUrl(user.getAvatarUrl()))
                 .roles(roles)
                 .accountType(user.getAccountType())
                 .username(user.getUsername())

@@ -6,6 +6,7 @@ import com.LastBite.modules.media.enums.MediaPurpose;
 import com.LastBite.modules.media.enums.MediaTargetType;
 import com.LastBite.modules.media.enums.MediaUploadStatus;
 import com.LastBite.modules.media.repository.MediaUploadRepository;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.store.dto.response.PublicStoreDetailResponse;
 import com.LastBite.modules.store.dto.response.StoreResponse;
 import com.LastBite.modules.store.entity.Store;
@@ -33,6 +34,7 @@ public class StoreQueryService implements StoreQueryServicePort {
 
     private final StoreRepository storeRepository;
     private final MediaUploadRepository mediaUploadRepository;
+    private final MediaUrlService mediaUrlService;
 
     /**
      * Tìm cửa hàng đã xác minh với bộ lọc tùy chọn (cache 5 phút).
@@ -86,8 +88,8 @@ public class StoreQueryService implements StoreQueryServicePort {
                 .city(store.getCity())
                 .lat(store.getLat())
                 .lng(store.getLng())
-                .coverImageUrl(store.getCoverImageUrl())
-                .logoUrl(store.getLogoUrl())
+                .coverImageUrl(mediaUrlService.resolveUrl(store.getCoverImageKey(), store.getCoverImageUrl()))
+                .logoUrl(mediaUrlService.resolveUrl(store.getLogoKey(), store.getLogoUrl()))
                 .galleryImageUrls(galleryImageUrls(store.getId()))
                 .status(store.getStatus())
                 .avgRating(store.getAvgRating())
@@ -109,8 +111,8 @@ public class StoreQueryService implements StoreQueryServicePort {
                 .city(store.getCity())
                 .lat(store.getLat())
                 .lng(store.getLng())
-                .coverImageUrl(store.getCoverImageUrl())
-                .logoUrl(store.getLogoUrl())
+                .coverImageUrl(mediaUrlService.resolveUrl(store.getCoverImageKey(), store.getCoverImageUrl()))
+                .logoUrl(mediaUrlService.resolveUrl(store.getLogoKey(), store.getLogoUrl()))
                 .galleryImageUrls(galleryImageUrls(store.getId()))
                 .status(store.getStatus())
                 .verificationStatus(store.getVerificationStatus())
@@ -132,7 +134,7 @@ public class StoreQueryService implements StoreQueryServicePort {
                         MediaPurpose.STORE_GALLERY,
                         MediaUploadStatus.CONFIRMED)
                 .stream()
-                .map(upload -> upload.getPublicUrl())
+                .map(upload -> mediaUrlService.resolveUrl(upload.getObjectKey(), upload.getPublicUrl()))
                 .toList();
     }
 }

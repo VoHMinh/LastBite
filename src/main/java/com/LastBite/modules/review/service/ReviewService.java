@@ -10,6 +10,7 @@ import com.LastBite.modules.media.enums.MediaPurpose;
 import com.LastBite.modules.media.enums.MediaTargetType;
 import com.LastBite.modules.media.enums.MediaUploadStatus;
 import com.LastBite.modules.media.repository.MediaUploadRepository;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.repository.OrderRepository;
@@ -60,6 +61,7 @@ public class ReviewService {
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
     private final MediaUploadRepository mediaUploadRepository;
+    private final MediaUrlService mediaUrlService;
     private final AdminAuditLogService auditLogService;
     private final Clock clock;
 
@@ -266,7 +268,9 @@ public class ReviewService {
                 .visible(review.isVisible())
                 .hiddenReason(review.getHiddenReason())
                 .photoUrls(photos.stream()
-                        .map(photo -> photo.getMediaUpload().getPublicUrl())
+                        .map(photo -> mediaUrlService.resolveUrl(
+                                photo.getMediaUpload().getObjectKey(),
+                                photo.getMediaUpload().getPublicUrl()))
                         .toList())
                 .createdAt(review.getCreatedAt())
                 .updatedAt(review.getUpdatedAt())

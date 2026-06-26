@@ -14,6 +14,7 @@ import com.LastBite.modules.discovery.enums.DiscoverySort;
 import com.LastBite.modules.discovery.repository.DiscoveryCollectionItemRepository;
 import com.LastBite.modules.discovery.repository.DiscoveryCollectionRepository;
 import com.LastBite.modules.discovery.repository.PlatformConfigRepository;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.order.repository.OrderRepository;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.user.repository.FavoriteStoreRepository;
@@ -52,7 +53,9 @@ class HomeDiscoveryServiceTest {
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T03:00:00Z"),
             ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagPricingService pricingService = new BagPricingService(clock);
-    private final BagDiscoveryMapper mapper = new BagDiscoveryMapper(favoriteStoreRepository, pricingService, clock);
+    private final MediaUrlService mediaUrlService = mock(MediaUrlService.class);
+    private final BagDiscoveryMapper mapper = new BagDiscoveryMapper(
+            favoriteStoreRepository, pricingService, mediaUrlService, clock);
     private final DiscoveryRankingService rankingService = new DiscoveryRankingService(platformConfigRepository, clock);
     private final HomeDiscoveryService service = new HomeDiscoveryService(collectionRepository, itemRepository,
             stockRepository, preferenceRepository, orderRepository, mapper, rankingService, clock);

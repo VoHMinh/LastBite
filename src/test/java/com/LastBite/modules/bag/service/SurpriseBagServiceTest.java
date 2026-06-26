@@ -16,6 +16,7 @@ import com.LastBite.modules.bag.repository.StockAuditLogRepository;
 import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.bag.service.impl.BagPricingService;
 import com.LastBite.modules.bag.service.impl.SurpriseBagService;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.merchant.service.StoreAccessService;
 import com.LastBite.modules.store.entity.Store;
@@ -32,6 +33,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -53,6 +56,7 @@ class SurpriseBagServiceTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final NotificationServicePort notificationService = mock(NotificationServicePort.class);
     private final StoreAccessService storeAccessService = mock(StoreAccessService.class);
+    private final MediaUrlService mediaUrlService = mock(MediaUrlService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T00:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagPricingService pricingService = new BagPricingService(clock);
 
@@ -63,8 +67,10 @@ class SurpriseBagServiceTest {
     void setUp() {
         service = new SurpriseBagService(bagRepository, stockRepository, priceTierRepository,
                 auditLogRepository, storeRepository, userRepository, pricingService, notificationService,
-                storeAccessService, clock);
+                storeAccessService, mediaUrlService, clock);
         ownerId = UUID.randomUUID();
+        when(mediaUrlService.resolveUrls(any(Collection.class)))
+                .thenAnswer(invocation -> List.copyOf(invocation.getArgument(0)));
 
         Store store = Store.builder()
                 .name("Tiem banh Test")

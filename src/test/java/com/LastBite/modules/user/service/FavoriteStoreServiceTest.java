@@ -3,6 +3,7 @@ package com.LastBite.modules.user.service;
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.repository.UserRepository;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.enums.StoreStatus;
@@ -27,8 +28,9 @@ class FavoriteStoreServiceTest {
     private final FavoriteStoreRepository favoriteStoreRepository = mock(FavoriteStoreRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final StoreRepository storeRepository = mock(StoreRepository.class);
+    private final MediaUrlService mediaUrlService = mock(MediaUrlService.class);
     private final FavoriteStoreService service = new FavoriteStoreService(
-            favoriteStoreRepository, userRepository, storeRepository);
+            favoriteStoreRepository, userRepository, storeRepository, mediaUrlService);
 
     @Test
     void addCreatesFavoriteStore() {

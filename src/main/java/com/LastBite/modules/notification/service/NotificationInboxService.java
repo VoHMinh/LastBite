@@ -3,6 +3,7 @@ package com.LastBite.modules.notification.service;
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.common.response.PageResponse;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.notification.dto.response.NotificationResponse;
 import com.LastBite.modules.notification.entity.AppNotification;
 import com.LastBite.modules.notification.repository.AppNotificationRepository;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class NotificationInboxService {
 
     private final AppNotificationRepository notificationRepository;
+    private final MediaUrlService mediaUrlService;
 
     @Transactional(readOnly = true)
     public PageResponse<NotificationResponse> list(UUID userId, int page, int size) {
@@ -80,7 +82,7 @@ public class NotificationInboxService {
                 .category(notification.getCategory())
                 .title(notification.getTitle())
                 .body(notification.getBody())
-                .imageUrl(notification.getImageUrl())
+                .imageUrl(mediaUrlService.resolveUrl(notification.getImageUrl()))
                 .deepLink(notification.getDeepLink())
                 .referenceType(notification.getReferenceType())
                 .referenceId(notification.getReferenceId())

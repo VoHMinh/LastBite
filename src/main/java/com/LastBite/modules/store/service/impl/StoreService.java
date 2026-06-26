@@ -8,6 +8,7 @@ import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.media.enums.*;
 import com.LastBite.modules.media.repository.MediaUploadRepository;
+import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.merchant.entity.MerchantBusinessProfile;
 import com.LastBite.modules.merchant.entity.StoreReviewApplication;
 import com.LastBite.modules.merchant.entity.ReviewFeedbackItem;
@@ -55,6 +56,7 @@ public class StoreService implements StoreServicePort {
     private final ReviewFeedbackItemRepository feedbackItemRepository;
     private final StoreReliabilityStatsRepository reliabilityStatsRepository;
     private final MediaUploadRepository mediaUploadRepository;
+    private final MediaUrlService mediaUrlService;
     private final MerchantBankAccountRepository bankAccountRepository;
     private final MerchantDocumentRepository documentRepository;
     private final StoreVersionRepository storeVersionRepository;
@@ -517,13 +519,15 @@ public class StoreService implements StoreServicePort {
                 .lat(store.getLat())
                 .lng(store.getLng())
                 .pickupInstructions(store.getPickupInstructions())
-                .storefrontImageUrl(store.getStorefrontImageUrl())
-                .menuImageUrl(store.getMenuImageUrl())
-                .coverImageUrl(store.getCoverImageUrl())
-                .logoUrl(store.getLogoUrl())
+                .storefrontImageUrl(mediaUrlService.resolveUrl(
+                        store.getStorefrontImageKey(), store.getStorefrontImageUrl()))
+                .menuImageUrl(mediaUrlService.resolveUrl(store.getMenuImageKey(), store.getMenuImageUrl()))
+                .coverImageUrl(mediaUrlService.resolveUrl(store.getCoverImageKey(), store.getCoverImageUrl()))
+                .logoUrl(mediaUrlService.resolveUrl(store.getLogoKey(), store.getLogoUrl()))
                 .galleryImageUrls(galleryImageUrls(store.getId()))
                 .businessLicenseNumber(store.getBusinessLicenseNumber())
-                .businessLicenseImageUrl(store.getBusinessLicenseImageUrl())
+                .businessLicenseImageUrl(mediaUrlService.resolveUrl(
+                        store.getBusinessLicenseImageKey(), store.getBusinessLicenseImageUrl()))
                 .status(store.getStatus())
                 .verificationStatus(store.getVerificationStatus())
                 .rejectionReason(store.getRejectionReason())
@@ -539,6 +543,8 @@ public class StoreService implements StoreServicePort {
         return mediaUploadRepository
                 .findAllByTargetTypeAndTargetIdAndPurposeAndStatusOrderByCreatedAtAsc(
                         MediaTargetType.STORE, storeId, MediaPurpose.STORE_GALLERY, MediaUploadStatus.CONFIRMED)
-                .stream().map(upload -> upload.getPublicUrl()).toList();
+                .stream()
+                .map(upload -> mediaUrlService.resolveUrl(upload.getObjectKey(), upload.getPublicUrl()))
+                .toList();
     }
 }
