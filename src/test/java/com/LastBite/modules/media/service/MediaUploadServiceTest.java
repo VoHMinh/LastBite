@@ -10,6 +10,9 @@ import com.LastBite.modules.auth.enums.RoleScope;
 import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.enums.UserStatus;
 import com.LastBite.modules.auth.repository.UserRepository;
+import com.LastBite.modules.bag.entity.SurpriseBag;
+import com.LastBite.modules.bag.enums.BagStatus;
+import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.media.dto.request.ConfirmMediaUploadRequest;
 import com.LastBite.modules.media.dto.request.CreatePresignedUploadRequest;
 import com.LastBite.modules.media.entity.MediaUpload;
@@ -50,6 +53,7 @@ class MediaUploadServiceTest {
     private final MediaUploadRepository mediaUploadRepository = mock(MediaUploadRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final StoreRepository storeRepository = mock(StoreRepository.class);
+    private final SurpriseBagRepository bagRepository = mock(SurpriseBagRepository.class);
     private final MerchantBusinessProfileRepository profileRepository =
             mock(MerchantBusinessProfileRepository.class);
     private final MerchantStoreMemberRepository memberRepository =
@@ -67,11 +71,12 @@ class MediaUploadServiceTest {
     private UUID ownerId;
     private User owner;
     private Store store;
+    private SurpriseBag bag;
 
     @BeforeEach
     void setUp() {
         service = new MediaUploadService(
-                mediaUploadRepository, userRepository, storeRepository, profileRepository,
+                mediaUploadRepository, userRepository, storeRepository, bagRepository, profileRepository,
                 memberRepository, documentRepository, storageService, mediaUrlService, properties, clock);
         ownerId = UUID.randomUUID();
         owner = merchantOwner();
@@ -93,9 +98,16 @@ class MediaUploadServiceTest {
                 .address("123 Test")
                 .build();
         store.setId(UUID.randomUUID());
+        bag = SurpriseBag.builder()
+                .store(store)
+                .status(BagStatus.ACTIVE)
+                .photos(new String[0])
+                .build();
+        bag.setId(UUID.randomUUID());
 
         when(userRepository.findById(ownerId)).thenReturn(Optional.of(owner));
         when(storeRepository.findDetailById(store.getId())).thenReturn(Optional.of(store));
+        when(bagRepository.findById(bag.getId())).thenReturn(Optional.of(bag));
         when(storageService.createPresignedPutUrl(any(), any(), any(), any()))
                 .thenReturn("https://signed-url");
         when(mediaUrlService.signedUrlForKey(any())).thenReturn("https://signed-get-url");
@@ -117,6 +129,17 @@ class MediaUploadServiceTest {
                 "public/store/" + store.getId() + "/" + ownerId + "/store_cover/"));
         assertTrue(response.getKey().endsWith(".jpg"));
         assertEquals(300, response.getExpiresInSeconds());
+    }
+
+    @Test
+    void createsPresignedUrlForBagImage() {
+        var response = service.createPresignedUploadUrl(
+                ownerId, bagImageRequest("bag.jpg", "image/jpeg", 1_024_000L));
+
+        assertEquals("https://signed-url", response.getUploadUrl());
+        assertTrue(response.getKey().startsWith(
+                "public/bag/" + bag.getId() + "/" + ownerId + "/bag_image/"));
+        assertTrue(response.getKey().endsWith(".jpg"));
     }
 
     @Test
@@ -160,6 +183,26 @@ class MediaUploadServiceTest {
         verify(storeRepository).save(store);
     }
 
+    @Test
+    void confirmsBagImageAndAppendsPhotoKeyToBag() {
+        String key = "public/bag/" + bag.getId() + "/" + ownerId + "/bag_image/a.jpg";
+        MediaUpload upload = pendingBagUpload(key);
+        when(mediaUploadRepository.findByIdAndOwnerId(upload.getId(), ownerId))
+                .thenReturn(Optional.of(upload));
+        when(storageService.objectExists("lastbite", key)).thenReturn(true);
+
+        ConfirmMediaUploadRequest request = new ConfirmMediaUploadRequest();
+        request.setUploadId(upload.getId());
+        request.setKey(key);
+
+        var response = service.confirmUpload(ownerId, request);
+
+        assertEquals(MediaUploadStatus.CONFIRMED, response.getStatus());
+        assertEquals(1, bag.getPhotos().length);
+        assertEquals(key, bag.getPhotos()[0]);
+        verify(bagRepository).save(bag);
+    }
+
     private CreatePresignedUploadRequest request(
             String fileName, String contentType, long fileSize) {
         CreatePresignedUploadRequest request = new CreatePresignedUploadRequest();
@@ -172,6 +215,18 @@ class MediaUploadServiceTest {
         return request;
     }
 
+    private CreatePresignedUploadRequest bagImageRequest(
+            String fileName, String contentType, long fileSize) {
+        CreatePresignedUploadRequest request = new CreatePresignedUploadRequest();
+        request.setFileName(fileName);
+        request.setContentType(contentType);
+        request.setFileSize(fileSize);
+        request.setPurpose(MediaPurpose.BAG_IMAGE);
+        request.setTargetType(MediaTargetType.BAG);
+        request.setTargetId(bag.getId());
+        return request;
+    }
+
     private MediaUpload pendingUpload(String key) {
         MediaUpload upload = MediaUpload.builder()
                 .owner(owner)
@@ -179,6 +234,24 @@ class MediaUploadServiceTest {
                 .mediaType(MediaType.IMAGE)
                 .targetType(MediaTargetType.STORE)
                 .targetId(store.getId())
+                .bucket("lastbite")
+                .objectKey(key)
+                .publicUrl("https://lastbite.s3.amazonaws.com/" + key)
+                .contentType("image/jpeg")
+                .fileSize(1000)
+                .status(MediaUploadStatus.PENDING)
+                .build();
+        upload.setId(UUID.randomUUID());
+        return upload;
+    }
+
+    private MediaUpload pendingBagUpload(String key) {
+        MediaUpload upload = MediaUpload.builder()
+                .owner(owner)
+                .purpose(MediaPurpose.BAG_IMAGE)
+                .mediaType(MediaType.IMAGE)
+                .targetType(MediaTargetType.BAG)
+                .targetId(bag.getId())
                 .bucket("lastbite")
                 .objectKey(key)
                 .publicUrl("https://lastbite.s3.amazonaws.com/" + key)

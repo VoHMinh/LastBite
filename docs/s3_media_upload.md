@@ -45,7 +45,9 @@ curl -X POST http://localhost:8080/api/v1/media/uploads/presigned-url \
     "fileName": "store-front.jpg",
     "contentType": "image/jpeg",
     "fileSize": 1024000,
-    "purpose": "STORE_COVER"
+    "purpose": "STORE_COVER",
+    "targetType": "STORE",
+    "targetId": "store-uuid"
   }'
 ```
 
@@ -107,5 +109,23 @@ async function uploadMedia(file, purpose, accessToken) {
   });
 
   return confirmRes.json();
+}
+```
+
+## Bag images
+
+Use `BAG_IMAGE` when uploading photos for a surprise bag. In this flow, `targetId`
+is the `bagId`, and the S3 object key is created under `public/bag/...`.
+After the upload is confirmed, the backend appends the uploaded object key to
+`surprise_bags.photos`.
+
+```json
+{
+  "fileName": "bag.jpg",
+  "contentType": "image/jpeg",
+  "fileSize": 1024000,
+  "purpose": "BAG_IMAGE",
+  "targetType": "BAG",
+  "targetId": "bag-uuid"
 }
 ```
