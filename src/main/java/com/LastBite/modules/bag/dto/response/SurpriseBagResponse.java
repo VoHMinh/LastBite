@@ -43,6 +43,7 @@ public class SurpriseBagResponse {
     private LocalTime pickupStartTime;
     private LocalTime pickupEndTime;
     private List<Integer> availableDays;
+    private List<WeeklyStockPlanItemResponse> weeklyStockPlan;
     private BagStatus status;
     private int version;
     private DailyStockResponse todayStock;

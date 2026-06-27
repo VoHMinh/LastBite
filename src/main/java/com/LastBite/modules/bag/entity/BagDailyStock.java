@@ -1,6 +1,7 @@
 package com.LastBite.modules.bag.entity;
 
 import com.LastBite.common.entity.BaseEntity;
+import com.LastBite.modules.bag.enums.DailyStockSource;
 import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.store.entity.Store;
 import jakarta.persistence.*;
@@ -50,6 +51,11 @@ public class BagDailyStock extends BaseEntity {
     @Column(nullable = false, length = 30)
     @Builder.Default
     private DailyStockStatus status = DailyStockStatus.ACTIVE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "stock_source", nullable = false, length = 30)
+    @Builder.Default
+    private DailyStockSource source = DailyStockSource.MANUAL;
 
     @Version
     @Column(nullable = false)

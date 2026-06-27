@@ -4,6 +4,7 @@ import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.store.enums.StoreCategory;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -51,4 +52,5 @@ public class UpdateSurpriseBagRequest {
 
     private Set<@Min(value = 0, message = "Ngày bán phải từ 0 đến 6")
                 @Max(value = 6, message = "Ngày bán phải từ 0 đến 6") Integer> availableDays;
+    private List<@Valid WeeklyStockPlanItemRequest> weeklyStockPlan;
 }

@@ -3,12 +3,18 @@ package com.LastBite.modules.bag.service;
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.modules.auth.repository.UserRepository;
 import com.LastBite.modules.bag.dto.request.CreateSurpriseBagRequest;
+import com.LastBite.modules.bag.dto.request.SetDailyStockRequest;
+import com.LastBite.modules.bag.dto.request.WeeklyStockPlanItemRequest;
+import com.LastBite.modules.bag.dto.response.StockCalendarResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
 import com.LastBite.modules.bag.entity.BagPriceTier;
+import com.LastBite.modules.bag.entity.BagDailyStock;
 import com.LastBite.modules.bag.entity.SurpriseBag;
 import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.bag.enums.BagStatus;
 import com.LastBite.modules.bag.enums.BagType;
+import com.LastBite.modules.bag.enums.DailyStockSource;
+import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.repository.BagDailyStockRepository;
 import com.LastBite.modules.bag.repository.BagPriceTierRepository;
@@ -31,6 +37,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Collection;
@@ -86,6 +93,7 @@ class SurpriseBagServiceTest {
         when(priceTierRepository.findByCategoryAndBagSizeAndActiveTrue(StoreCategory.BAKERY, BagSize.STANDARD))
                 .thenReturn(Optional.of(priceTier(StoreCategory.BAKERY, BagSize.STANDARD)));
         when(bagRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(stockRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -173,6 +181,102 @@ class SurpriseBagServiceTest {
     }
 
     @Test
+    void createSnapshotsWeeklyStockPlan() {
+        CreateSurpriseBagRequest request = validRequest();
+        request.setWeeklyStockPlan(List.of(weeklyPlan(1, 8), weeklyPlan(3, 4)));
+
+        SurpriseBagResponse response = service.create(ownerId, request);
+
+        assertEquals(8, response.getWeeklyStockPlan().get(1).getQuantity());
+        assertEquals(4, response.getWeeklyStockPlan().get(3).getQuantity());
+        verify(bagRepository).save(argThat(argument -> {
+            SurpriseBag bag = (SurpriseBag) argument;
+            return bag.getWeeklyStockPlan()[1] == 8 && bag.getWeeklyStockPlan()[3] == 4;
+        }));
+    }
+
+    @Test
+    void createRejectsWeeklyStockForUnavailableDay() {
+        CreateSurpriseBagRequest request = validRequest();
+        request.setWeeklyStockPlan(List.of(weeklyPlan(0, 5)));
+
+        assertThrows(ApiException.class, () -> service.create(ownerId, request));
+
+        verify(bagRepository, never()).save(any());
+    }
+
+    @Test
+    void createUpcomingStocksUsesWeeklyPlanAndDoesNotCreateZeroQuantityRows() {
+        SurpriseBag bag = existingBag(UUID.randomUUID());
+        bag.setAvailableDays(new Integer[]{2});
+        bag.setWeeklyStockPlan(new Integer[]{0, 0, 7, 0, 0, 0, 0});
+        when(bagRepository.findActiveBagsMissingStockForDate(any())).thenReturn(List.of());
+        when(bagRepository.findActiveBagsMissingStockForDate(LocalDate.of(2026, 5, 26)))
+                .thenReturn(List.of(bag));
+
+        int created = service.createUpcomingStocks();
+
+        assertEquals(1, created);
+        verify(stockRepository).save(argThat(argument -> {
+            BagDailyStock stock = (BagDailyStock) argument;
+            return stock.getDate().equals(LocalDate.of(2026, 5, 26))
+                    && stock.getQuantity() == 7
+                    && stock.getSource() == DailyStockSource.WEEKLY_DEFAULT;
+        }));
+    }
+
+    @Test
+    void setStockMarksRowAsManualOverride() {
+        UUID bagId = UUID.randomUUID();
+        SurpriseBag bag = existingBag(bagId);
+        when(bagRepository.findByIdAndStoreBusinessProfileOwnerId(bagId, ownerId))
+                .thenReturn(Optional.of(bag));
+        when(userRepository.findById(ownerId)).thenReturn(Optional.of(com.LastBite.modules.auth.entity.User.builder()
+                .email("owner@test.com")
+                .fullName("Owner")
+                .build()));
+        SetDailyStockRequest request = new SetDailyStockRequest();
+        request.setQuantity(6);
+
+        service.setStock(ownerId, bagId, LocalDate.of(2026, 5, 25), request);
+
+        verify(stockRepository).save(argThat(argument -> {
+            BagDailyStock stock = (BagDailyStock) argument;
+            return stock.getQuantity() == 6 && stock.getSource() == DailyStockSource.MANUAL;
+        }));
+    }
+
+    @Test
+    void stockCalendarCombinesManualRowsAndWeeklyDefaults() {
+        UUID bagId = UUID.randomUUID();
+        SurpriseBag bag = existingBag(bagId);
+        bag.setWeeklyStockPlan(new Integer[]{0, 9, 5, 0, 0, 0, 0});
+        when(bagRepository.findByIdAndStoreBusinessProfileOwnerId(bagId, ownerId))
+                .thenReturn(Optional.of(bag));
+        BagDailyStock manual = BagDailyStock.builder()
+                .bag(bag)
+                .store(bag.getStore())
+                .date(LocalDate.of(2026, 5, 25))
+                .quantity(3)
+                .reserved(1)
+                .sold(1)
+                .status(DailyStockStatus.ACTIVE)
+                .source(DailyStockSource.MANUAL)
+                .build();
+        when(stockRepository.findByBagIdAndDateBetweenOrderByDateAsc(
+                bagId, LocalDate.of(2026, 5, 25), LocalDate.of(2026, 5, 26)))
+                .thenReturn(List.of(manual));
+
+        List<StockCalendarResponse> calendar = service.stockCalendar(
+                ownerId, bagId, LocalDate.of(2026, 5, 25), LocalDate.of(2026, 5, 26));
+
+        assertEquals(DailyStockSource.MANUAL, calendar.get(0).getSource());
+        assertEquals(1, calendar.get(0).getAvailable());
+        assertEquals(DailyStockSource.WEEKLY_DEFAULT, calendar.get(1).getSource());
+        assertEquals(5, calendar.get(1).getQuantity());
+    }
+
+    @Test
     void updateChangesDietTypeWhenProvided() {
         UUID bagId = UUID.randomUUID();
         SurpriseBag bag = existingBag(bagId);
@@ -204,6 +308,13 @@ class SurpriseBagServiceTest {
         request.setPickupEndTime(LocalTime.of(21, 0));
         request.setAvailableDays(Set.of(1, 2, 3, 4, 5));
         return request;
+    }
+
+    private WeeklyStockPlanItemRequest weeklyPlan(int day, int quantity) {
+        WeeklyStockPlanItemRequest item = new WeeklyStockPlanItemRequest();
+        item.setDayOfWeek(day);
+        item.setQuantity(quantity);
+        return item;
     }
 
     private SurpriseBag existingBag(UUID bagId) {
@@ -238,6 +349,7 @@ class SurpriseBagServiceTest {
                 .pickupStartTime(LocalTime.of(20, 0))
                 .pickupEndTime(LocalTime.of(21, 0))
                 .availableDays(new Integer[]{1, 2, 3, 4, 5})
+                .weeklyStockPlan(new Integer[]{0, 0, 0, 0, 0, 0, 0})
                 .status(BagStatus.ACTIVE)
                 .build();
         ReflectionTestUtils.setField(bag, "id", bagId);

@@ -9,15 +9,19 @@ import com.LastBite.modules.bag.dto.request.AdjustTodayStockRequest;
 import com.LastBite.modules.bag.dto.request.CreateSurpriseBagRequest;
 import com.LastBite.modules.bag.dto.request.SetDailyStockRequest;
 import com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest;
+import com.LastBite.modules.bag.dto.request.WeeklyStockPlanItemRequest;
 import com.LastBite.modules.bag.dto.response.BagPriceTierSummaryResponse;
 import com.LastBite.modules.bag.dto.response.DailyStockResponse;
 import com.LastBite.modules.bag.dto.response.StockAuditLogResponse;
+import com.LastBite.modules.bag.dto.response.StockCalendarResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
+import com.LastBite.modules.bag.dto.response.WeeklyStockPlanItemResponse;
 import com.LastBite.modules.bag.entity.BagPriceTier;
 import com.LastBite.modules.bag.entity.BagDailyStock;
 import com.LastBite.modules.bag.entity.StockAuditLog;
 import com.LastBite.modules.bag.entity.SurpriseBag;
 import com.LastBite.modules.bag.enums.BagStatus;
+import com.LastBite.modules.bag.enums.DailyStockSource;
 import com.LastBite.modules.bag.enums.DailyStockStatus;
 import com.LastBite.modules.bag.enums.DietType;
 import com.LastBite.modules.bag.enums.StockAuditAction;
@@ -45,9 +49,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -58,6 +66,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     private static final int MAX_STOCK_PER_DAY = 50;
     private static final int MIN_PICKUP_MINUTES = 30;
     private static final int MAX_PICKUP_MINUTES = 240;
+    private static final int STOCK_FORECAST_DAYS = 7;
     private static final String DEFAULT_PACKAGING_NOTE = "We recommend bringing your own bag.";
 
     private final SurpriseBagRepository bagRepository;
@@ -92,6 +101,8 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     private SurpriseBagResponse createForStore(Store store, CreateSurpriseBagRequest request) {
         validatePickupWindow(request.getPickupStartTime(), request.getPickupEndTime());
         BagPriceTier tier = getPriceTier(request.getCategory(), request.getBagSize());
+        Integer[] availableDays = toDayArray(request.getAvailableDays().stream().toList());
+        Integer[] weeklyStockPlan = toWeeklyStockPlan(request.getWeeklyStockPlan(), Set.of(availableDays));
 
         SurpriseBag bag = SurpriseBag.builder()
                 .store(store)
@@ -116,7 +127,8 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                         : trimToNull(request.getPackagingNote()))
                 .pickupStartTime(request.getPickupStartTime())
                 .pickupEndTime(request.getPickupEndTime())
-                .availableDays(toDayArray(request.getAvailableDays().stream().toList()))
+                .availableDays(availableDays)
+                .weeklyStockPlan(weeklyStockPlan)
                 .status(BagStatus.ACTIVE)
                 .build();
 
@@ -152,6 +164,12 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         var pickupStart = request.getPickupStartTime() != null ? request.getPickupStartTime() : bag.getPickupStartTime();
         var pickupEnd = request.getPickupEndTime() != null ? request.getPickupEndTime() : bag.getPickupEndTime();
         validatePickupWindow(pickupStart, pickupEnd);
+        Integer[] availableDays = request.getAvailableDays() != null
+                ? toDayArray(request.getAvailableDays().stream().toList())
+                : normalizeDayArray(bag.getAvailableDays());
+        Integer[] weeklyStockPlan = request.getWeeklyStockPlan() != null
+                ? toWeeklyStockPlan(request.getWeeklyStockPlan(), Set.of(availableDays))
+                : normalizeWeeklyStockPlan(bag.getWeeklyStockPlan(), Set.of(availableDays));
 
         if (request.getName() != null && !request.getName().isBlank()) bag.setName(request.getName().trim());
         if (request.getDescription() != null) bag.setDescription(trimToNull(request.getDescription()));
@@ -170,7 +188,10 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         if (request.getPackagingNote() != null) bag.setPackagingNote(trimToNull(request.getPackagingNote()));
         if (request.getPickupStartTime() != null) bag.setPickupStartTime(request.getPickupStartTime());
         if (request.getPickupEndTime() != null) bag.setPickupEndTime(request.getPickupEndTime());
-        if (request.getAvailableDays() != null) bag.setAvailableDays(toDayArray(request.getAvailableDays().stream().toList()));
+        if (request.getAvailableDays() != null) bag.setAvailableDays(availableDays);
+        if (request.getWeeklyStockPlan() != null || request.getAvailableDays() != null) {
+            bag.setWeeklyStockPlan(weeklyStockPlan);
+        }
 
         bag = bagRepository.save(bag);
         log.info("Đã cập nhật túi bất ngờ {}", bag.getId());
@@ -222,6 +243,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                         .bag(bag)
                         .store(bag.getStore())
                         .date(date)
+                        .source(DailyStockSource.MANUAL)
                         .status(DailyStockStatus.ACTIVE)
                         .build());
 
@@ -233,6 +255,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         }
 
         stock.setQuantity(request.getQuantity());
+        stock.setSource(DailyStockSource.MANUAL);
         stock.setStatus(resolveStockStatus(stock));
         stock = stockRepository.save(stock);
 
@@ -261,6 +284,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                         .bag(bag)
                         .store(bag.getStore())
                         .date(today)
+                        .source(DailyStockSource.MANUAL)
                         .status(DailyStockStatus.ACTIVE)
                         .build());
 
@@ -274,6 +298,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         validateStockQuantity(target, stock.getReserved(), stock.getSold());
 
         stock.setQuantity(target);
+        stock.setSource(DailyStockSource.MANUAL);
         stock.setStatus(resolveStockStatus(stock));
         stock = stockRepository.save(stock);
 
@@ -283,6 +308,32 @@ public class SurpriseBagService implements SurpriseBagServicePort {
         notifyFavoriteStoreIfNewAvailability(today, stock, availableBefore);
 
         return toStockResponse(stock);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockCalendarResponse> stockCalendar(UUID ownerId, UUID bagId, LocalDate from, LocalDate to) {
+        SurpriseBag bag = getOwnedBag(ownerId, bagId);
+        ensureNotArchived(bag);
+        LocalDate start = from == null ? LocalDate.now(clock) : from;
+        LocalDate end = to == null ? start.plusDays(14) : to;
+        if (end.isBefore(start)) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Ngay ket thuc phai sau ngay bat dau");
+        }
+        if (java.time.temporal.ChronoUnit.DAYS.between(start, end) > 31) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Chi duoc xem toi da 31 ngay moi lan");
+        }
+
+        Map<LocalDate, BagDailyStock> stocksByDate = new HashMap<>();
+        for (BagDailyStock stock : stockRepository.findByBagIdAndDateBetweenOrderByDateAsc(bagId, start, end)) {
+            stocksByDate.put(stock.getDate(), stock);
+        }
+
+        List<StockCalendarResponse> result = new ArrayList<>();
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+            BagDailyStock stock = stocksByDate.get(date);
+            result.add(stock == null ? virtualStockCalendarRow(bag, date) : toStockCalendarResponse(stock));
+        }
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -324,20 +375,39 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     @Transactional
     @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public int createTodayStocks() {
-        LocalDate today = LocalDate.now(clock);
-        List<SurpriseBag> bags = bagRepository.findActiveBagsMissingStockForDate(today);
+        return createStocksForDate(LocalDate.now(clock));
+    }
+
+    @Transactional
+    @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
+    public int createUpcomingStocks() {
+        int created = 0;
+        LocalDate tomorrow = LocalDate.now(clock).plusDays(1);
+        for (int offset = 0; offset < STOCK_FORECAST_DAYS; offset++) {
+            created += createStocksForDate(tomorrow.plusDays(offset));
+        }
+        return created;
+    }
+
+    private int createStocksForDate(LocalDate date) {
+        List<SurpriseBag> bags = bagRepository.findActiveBagsMissingStockForDate(date);
         int created = 0;
         for (SurpriseBag bag : bags) {
-            if (!isAvailableOnDate(bag, today)) {
+            if (!isAvailableOnDate(bag, date)) {
+                continue;
+            }
+            int quantity = weeklyQuantityForDate(bag, date);
+            if (quantity <= 0) {
                 continue;
             }
             BagDailyStock stock = BagDailyStock.builder()
                     .bag(bag)
                     .store(bag.getStore())
-                    .date(today)
-                    .quantity(0)
+                    .date(date)
+                    .quantity(quantity)
                     .reserved(0)
                     .sold(0)
+                    .source(DailyStockSource.WEEKLY_DEFAULT)
                     .status(DailyStockStatus.ACTIVE)
                     .build();
             stockRepository.save(stock);
@@ -408,8 +478,73 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     private boolean isAvailableOnDate(SurpriseBag bag, LocalDate date) {
-        int day = date.getDayOfWeek().getValue() % 7;
+        int day = weekdayIndex(date);
         return Arrays.asList(bag.getAvailableDays()).contains(day);
+    }
+
+    private int weeklyQuantityForDate(SurpriseBag bag, LocalDate date) {
+        Integer[] plan = normalizeWeeklyStockPlan(
+                bag.getWeeklyStockPlan(),
+                Set.of(normalizeDayArray(bag.getAvailableDays())));
+        return plan[weekdayIndex(date)];
+    }
+
+    private int weekdayIndex(LocalDate date) {
+        return date.getDayOfWeek().getValue() % 7;
+    }
+
+    private Integer[] toWeeklyStockPlan(List<WeeklyStockPlanItemRequest> values, Set<Integer> availableDays) {
+        Integer[] plan = zeroWeeklyStockPlan();
+        if (values == null) {
+            return plan;
+        }
+        boolean[] seen = new boolean[7];
+        for (WeeklyStockPlanItemRequest item : values) {
+            if (item == null || item.getDayOfWeek() == null || item.getQuantity() == null) {
+                throw new ApiException(ErrorCode.INVALID_INPUT, "Lich so luong mac dinh khong hop le");
+            }
+            int day = item.getDayOfWeek();
+            int quantity = item.getQuantity();
+            if (day < 0 || day > 6 || quantity < 0 || quantity > MAX_STOCK_PER_DAY) {
+                throw new ApiException(ErrorCode.INVALID_INPUT, "Lich so luong mac dinh khong hop le");
+            }
+            if (seen[day]) {
+                throw new ApiException(ErrorCode.INVALID_INPUT, "Ngay trong weeklyStockPlan bi trung");
+            }
+            if (quantity > 0 && !availableDays.contains(day)) {
+                throw new ApiException(ErrorCode.INVALID_INPUT,
+                        "Chi duoc set so luong mac dinh cho ngay bag mo ban");
+            }
+            seen[day] = true;
+            plan[day] = quantity;
+        }
+        return plan;
+    }
+
+    private Integer[] normalizeWeeklyStockPlan(Integer[] values, Set<Integer> availableDays) {
+        Integer[] plan = zeroWeeklyStockPlan();
+        if (values == null) {
+            return plan;
+        }
+        if (values.length != 7) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "weeklyStockPlan phai co du 7 ngay");
+        }
+        for (int day = 0; day < values.length; day++) {
+            int quantity = values[day] == null ? 0 : values[day];
+            if (quantity < 0 || quantity > MAX_STOCK_PER_DAY) {
+                throw new ApiException(ErrorCode.INVALID_INPUT, "Lich so luong mac dinh khong hop le");
+            }
+            if (quantity > 0 && !availableDays.contains(day)) {
+                throw new ApiException(ErrorCode.INVALID_INPUT,
+                        "Chi duoc set so luong mac dinh cho ngay bag mo ban");
+            }
+            plan[day] = quantity;
+        }
+        return plan;
+    }
+
+    private Integer[] zeroWeeklyStockPlan() {
+        return new Integer[]{0, 0, 0, 0, 0, 0, 0};
     }
 
     private void validateStockQuantity(int quantity, int reserved, int sold) {
@@ -510,6 +645,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                 .pickupStartTime(bag.getPickupStartTime())
                 .pickupEndTime(bag.getPickupEndTime())
                 .availableDays(Arrays.stream(bag.getAvailableDays()).sorted().toList())
+                .weeklyStockPlan(toWeeklyStockPlanResponse(bag.getWeeklyStockPlan()))
                 .status(bag.getStatus())
                 .version(bag.getVersion())
                 .todayStock(todayStock == null ? null : toStockResponse(todayStock))
@@ -555,6 +691,46 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                 .build();
     }
 
+    private StockCalendarResponse virtualStockCalendarRow(SurpriseBag bag, LocalDate date) {
+        int quantity = isAvailableOnDate(bag, date) ? weeklyQuantityForDate(bag, date) : 0;
+        return StockCalendarResponse.builder()
+                .dailyStockId(null)
+                .date(date)
+                .quantity(quantity)
+                .reserved(0)
+                .sold(0)
+                .available(quantity)
+                .status(quantity > 0 ? DailyStockStatus.ACTIVE : null)
+                .source(DailyStockSource.WEEKLY_DEFAULT)
+                .build();
+    }
+
+    private StockCalendarResponse toStockCalendarResponse(BagDailyStock stock) {
+        DailyStockSource source = stock.getSource() == null ? DailyStockSource.MANUAL : stock.getSource();
+        return StockCalendarResponse.builder()
+                .dailyStockId(stock.getId())
+                .date(stock.getDate())
+                .quantity(stock.getQuantity())
+                .reserved(stock.getReserved())
+                .sold(stock.getSold())
+                .available(stock.available())
+                .status(stock.getStatus())
+                .source(source)
+                .build();
+    }
+
+    private List<WeeklyStockPlanItemResponse> toWeeklyStockPlanResponse(Integer[] values) {
+        Integer[] plan = values == null || values.length != 7 ? zeroWeeklyStockPlan() : values;
+        List<WeeklyStockPlanItemResponse> response = new ArrayList<>();
+        for (int day = 0; day < 7; day++) {
+            response.add(WeeklyStockPlanItemResponse.builder()
+                    .dayOfWeek(day)
+                    .quantity(plan[day] == null ? 0 : plan[day])
+                    .build());
+        }
+        return response;
+    }
+
     private String[] toStringArray(List<String> values) {
         if (values == null) return new String[0];
         return values.stream()
@@ -571,6 +747,13 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                 .distinct()
                 .sorted(Comparator.naturalOrder())
                 .toArray(Integer[]::new);
+    }
+
+    private Integer[] normalizeDayArray(Integer[] values) {
+        if (values == null) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Can chon it nhat 1 ngay ban");
+        }
+        return toDayArray(Arrays.asList(values));
     }
 
     private String trimToNull(String value) {

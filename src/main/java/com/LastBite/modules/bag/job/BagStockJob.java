@@ -19,6 +19,12 @@ public class BagStockJob {
         log.info("Tồn kho ngày mới: đã tạo {} bản ghi bag_daily_stocks", created);
     }
 
+    @Scheduled(cron = "0 5 0 * * *", zone = "Asia/Ho_Chi_Minh")
+    public void createUpcomingStocks() {
+        int created = surpriseBagService.createUpcomingStocks();
+        log.info("Forecast ton kho: da tao {} ban ghi bag_daily_stocks cho cac ngay toi", created);
+    }
+
     @Scheduled(cron = "0 55 23 * * *", zone = "Asia/Ho_Chi_Minh")
     public void expireUnsoldStocks() {
         int expired = surpriseBagService.expireUnsoldStocks();

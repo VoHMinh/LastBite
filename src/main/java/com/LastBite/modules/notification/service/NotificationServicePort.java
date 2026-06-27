@@ -11,6 +11,7 @@ import com.LastBite.modules.promotion.entity.VoucherCampaign;
 import com.LastBite.modules.store.entity.Store;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 public interface NotificationServicePort {
 
@@ -59,6 +60,8 @@ public interface NotificationServicePort {
     void notifyMerchantStockLow(BagDailyStock stock);
 
     void notifyMerchantSetStockReminder(Store store);
+
+    void notifyMerchantTomorrowStockSummary(Store store, LocalDate date, int totalQuantity, int bagCount);
 
     void notifyMerchantStoreApproved(Store store);
 

@@ -1,5 +1,7 @@
 package com.LastBite.modules.notification.job;
 
+import com.LastBite.modules.bag.repository.BagDailyStockRepository;
+import com.LastBite.modules.bag.service.SurpriseBagServicePort;
 import com.LastBite.modules.notification.service.NotificationServicePort;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.repository.OrderRepository;
@@ -30,6 +32,8 @@ public class NotificationReminderJob {
 
     private final OrderRepository orderRepository;
     private final StoreRepository storeRepository;
+    private final BagDailyStockRepository stockRepository;
+    private final SurpriseBagServicePort surpriseBagService;
     private final NotificationServicePort notificationService;
     private final Clock clock;
 
@@ -82,12 +86,18 @@ public class NotificationReminderJob {
     }
     @Scheduled(cron = "0 0 20 * * *", zone = "Asia/Ho_Chi_Minh")
     public void sendMerchantStockSetupReminders() {
+        int generated = surpriseBagService.createUpcomingStocks();
+        LocalDate tomorrow = LocalDate.now(clock).plusDays(1);
         var stores = storeRepository.findAllByStatusAndVerificationStatus(StoreStatus.ACTIVE, VerificationStatus.VERIFIED);
         for (var store : stores) {
-            notificationService.notifyMerchantSetStockReminder(store);
+            var stocks = stockRepository.findByStoreIdAndDateWithBag(store.getId(), tomorrow);
+            int totalQuantity = stocks.stream().mapToInt(stock -> Math.max(0, stock.getQuantity())).sum();
+            int bagCount = (int) stocks.stream().filter(stock -> stock.getQuantity() > 0).count();
+            notificationService.notifyMerchantTomorrowStockSummary(store, tomorrow, totalQuantity, bagCount);
         }
         if (!stores.isEmpty()) {
-            log.info("Queued {} merchant stock setup reminder notification batch(es)", stores.size());
+            log.info("Queued {} merchant tomorrow stock summary notification batch(es); generated {} forecast stock(s)",
+                    stores.size(), generated);
         }
     }
 }

@@ -8,6 +8,7 @@ import com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest;
 import com.LastBite.modules.bag.dto.response.BagPriceTierSummaryResponse;
 import com.LastBite.modules.bag.dto.response.DailyStockResponse;
 import com.LastBite.modules.bag.dto.response.StockAuditLogResponse;
+import com.LastBite.modules.bag.dto.response.StockCalendarResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
 import com.LastBite.modules.store.enums.StoreCategory;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +39,8 @@ public interface SurpriseBagServicePort {
 
     DailyStockResponse adjustTodayStock(UUID ownerId, UUID bagId, AdjustTodayStockRequest request);
 
+    List<StockCalendarResponse> stockCalendar(UUID ownerId, UUID bagId, LocalDate from, LocalDate to);
+
     PageResponse<StockAuditLogResponse> auditLogs(UUID ownerId, UUID bagId, Pageable pageable);
 
     List<BagPriceTierSummaryResponse> listActivePriceTiers(StoreCategory category);
@@ -45,6 +48,8 @@ public interface SurpriseBagServicePort {
     List<StoreCategory> listAvailableCategories();
 
     int createTodayStocks();
+
+    int createUpcomingStocks();
 
     int expireUnsoldStocks();
 }
