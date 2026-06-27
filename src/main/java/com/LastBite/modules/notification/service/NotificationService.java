@@ -29,9 +29,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,13 +47,15 @@ import java.util.UUID;
 public class NotificationService implements NotificationServicePort {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
-    private static final Set<UserRole> MERCHANT_PUSH_ROLES = Set.of(UserRole.MANAGER, UserRole.STAFF);
+    private static final Set<UserRole> MERCHANT_PUSH_ROLES = Set.of(
+            UserRole.MERCHANT_OWNER, UserRole.MANAGER, UserRole.STAFF);
 
     private final AppNotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final FavoriteStoreRepository favoriteStoreRepository;
     private final MerchantStoreMemberRepository merchantStoreMemberRepository;
     private final NotificationDispatchService dispatchService;
+    private final Clock clock;
 
     @Override
     @Transactional
@@ -382,12 +388,24 @@ public class NotificationService implements NotificationServicePort {
     @Override
     @Transactional
     public void notifyMerchantStockLow(BagDailyStock stock) {
-        if (stock.available() <= 0 || stock.available() > 2) return;
-        createForMerchantStore(stock.getStore(), NotificationType.MERCHANT_STOCK_LOW,
-                "Sap het tui hom nay", stock.getBag().getName() + " chi con " + stock.available() + " phan trong hom nay.",
-                "/merchant/bags/" + stock.getBag().getId(), NotificationReferenceType.BAG, stock.getBag().getId(),
-                stockPayload(stock), "MERCHANT_STOCK_LOW:" + stock.getId() + ":" + stock.available());
+        if (!stock.getDate().equals(LocalDate.now(clock))
+                || !java.time.LocalTime.now(clock).isBefore(stock.getBag().getPickupEndTime())
+                || stock.available() > 2) {
+            return;
+        }
+        int available = Math.max(0, stock.available());
+        NotificationType type = available == 0 ? NotificationType.MERCHANT_SOLD_OUT : NotificationType.MERCHANT_STOCK_LOW;
+        String title = available == 0 ? "Tui da het som" : "Sap het tui hom nay";
+        String body = available == 0
+                ? stock.getBag().getName() + " da het tui. Neu con surplus, hay tang stock de ban them."
+                : stock.getBag().getName() + " chi con " + available + " phan. Neu con surplus, hay tang stock de ban them.";
+        createForMerchantStore(stock.getStore(), type,
+                title, body,
+                "/merchant/bags/" + stock.getBag().getId() + "/stock/today",
+                NotificationReferenceType.BAG, stock.getBag().getId(),
+                stockPayload(stock), "MERCHANT_ADD_MORE_STOCK:" + stock.getId() + ":" + available);
     }
+
     @Override
     @Transactional
     public void notifyMerchantSetStockReminder(Store store) {
@@ -395,6 +413,27 @@ public class NotificationService implements NotificationServicePort {
                 "Mo tui cho ngay mai?", "Hay cap nhat so luong tui ngay mai cho " + store.getName() + " de khach co the dat som.",
                 "/merchant/stores/" + store.getId() + "/bags", NotificationReferenceType.STORE, store.getId(),
                 storePayload(store), "MERCHANT_SET_STOCK_REMINDER:" + store.getId() + ":" + Instant.now().toString().substring(0, 10));
+    }
+
+    @Override
+    @Transactional
+    public void notifyMerchantTomorrowStockSummary(Store store, LocalDate date, int totalQuantity, int bagCount) {
+        Map<String, String> payload = storePayload(store);
+        payload.put("date", date.toString());
+        payload.put("totalQuantity", String.valueOf(totalQuantity));
+        payload.put("bagCount", String.valueOf(bagCount));
+
+        boolean hasStock = totalQuantity > 0;
+        String title = hasStock ? "Stock ngay mai da san sang" : "Chua mo stock ngay mai";
+        String body = hasStock
+                ? "Ngay mai ban dang mo " + totalQuantity + " tui o " + bagCount
+                    + " loai bag. Neu du kien du nhieu hon, hay tang stock."
+                : "Ban chua mo stock cho ngay mai. Cap nhat so luong de khach co the dat som.";
+        createForMerchantStore(store, NotificationType.MERCHANT_TOMORROW_STOCK_SUMMARY,
+                title, body,
+                "/merchant/stores/" + store.getId() + "/stock-calendar?date=" + date,
+                NotificationReferenceType.STORE, store.getId(),
+                payload, "MERCHANT_TOMORROW_STOCK_SUMMARY:" + store.getId() + ":" + date);
     }
 
     @Override
@@ -582,13 +621,20 @@ public class NotificationService implements NotificationServicePort {
     }
 
     private List<User> merchantRecipients(Store store) {
-        return merchantStoreMemberRepository.findAllByStoreIdOrderByCreatedAtAsc(store.getId()).stream()
+        Map<UUID, User> recipients = new LinkedHashMap<>();
+        if (store.getBusinessProfile() != null && store.getBusinessProfile().getOwner() != null) {
+            User owner = store.getBusinessProfile().getOwner();
+            if (owner.getStatus() == UserStatus.ACTIVE) {
+                recipients.put(owner.getId(), owner);
+            }
+        }
+        merchantStoreMemberRepository.findAllByStoreIdOrderByCreatedAtAsc(store.getId()).stream()
                 .filter(member -> member.getStatus() == StoreMemberStatus.ACTIVE)
                 .filter(member -> member.getRole() != null && MERCHANT_PUSH_ROLES.contains(member.getRole().getCode()))
                 .map(member -> member.getUser())
                 .filter(user -> user.getStatus() == UserStatus.ACTIVE)
-                .distinct()
-                .toList();
+                .forEach(user -> recipients.put(user.getId(), user));
+        return new ArrayList<>(recipients.values());
     }
     private String firstPhoto(BagDailyStock stock) {
         String[] photos = stock.getBag().getPhotos();

@@ -107,6 +107,11 @@ public class SurpriseBag extends BaseEntity {
     @Column(name = "available_days", nullable = false, columnDefinition = "integer array")
     private Integer[] availableDays;
 
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "weekly_stock_plan", nullable = false, columnDefinition = "integer array")
+    @Builder.Default
+    private Integer[] weeklyStockPlan = new Integer[]{0, 0, 0, 0, 0, 0, 0};
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default

@@ -19,6 +19,17 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
 
     Optional<BagDailyStock> findByBagIdAndDate(UUID bagId, LocalDate date);
 
+    List<BagDailyStock> findByBagIdAndDateBetweenOrderByDateAsc(UUID bagId, LocalDate from, LocalDate to);
+
+    @Query("""
+        SELECT s FROM BagDailyStock s
+        JOIN FETCH s.bag b
+        WHERE s.store.id = :storeId AND s.date = :date
+        ORDER BY b.pickupStartTime ASC
+    """)
+    List<BagDailyStock> findByStoreIdAndDateWithBag(@Param("storeId") UUID storeId,
+                                                     @Param("date") LocalDate date);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT s FROM BagDailyStock s

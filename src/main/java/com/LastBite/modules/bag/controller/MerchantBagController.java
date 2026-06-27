@@ -8,6 +8,7 @@ import com.LastBite.modules.bag.dto.request.SetDailyStockRequest;
 import com.LastBite.modules.bag.dto.request.UpdateSurpriseBagRequest;
 import com.LastBite.modules.bag.dto.response.BagPriceTierSummaryResponse;
 import com.LastBite.modules.bag.dto.response.DailyStockResponse;
+import com.LastBite.modules.bag.dto.response.StockCalendarResponse;
 import com.LastBite.modules.bag.dto.response.StockAuditLogResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
 import com.LastBite.modules.bag.service.SurpriseBagServicePort;
@@ -110,6 +111,17 @@ public class MerchantBagController {
             @Valid @RequestBody AdjustTodayStockRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(bagService.adjustTodayStock(extractUserId(jwt), bagId, request),
                 "Đã điều chỉnh tồn kho hôm nay"));
+    }
+
+    @GetMapping("/{bagId}/stock-calendar")
+    @Operation(summary = "Lich ton kho cua tui")
+    public ResponseEntity<ApiResponse<List<StockCalendarResponse>>> stockCalendar(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bagId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                bagService.stockCalendar(extractUserId(jwt), bagId, from, to)));
     }
 
     @GetMapping("/{bagId}/audit-logs")
