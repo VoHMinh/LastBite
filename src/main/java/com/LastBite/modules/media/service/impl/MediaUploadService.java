@@ -6,6 +6,9 @@ import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.enums.UserRole;
 import com.LastBite.modules.auth.repository.UserRepository;
+import com.LastBite.modules.bag.entity.SurpriseBag;
+import com.LastBite.modules.bag.enums.BagStatus;
+import com.LastBite.modules.bag.repository.SurpriseBagRepository;
 import com.LastBite.modules.media.dto.request.*;
 import com.LastBite.modules.media.dto.response.*;
 import com.LastBite.modules.media.entity.MediaUpload;
@@ -41,6 +44,7 @@ public class MediaUploadService implements MediaUploadServicePort {
     private final MediaUploadRepository mediaUploadRepository;
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
+    private final SurpriseBagRepository bagRepository;
     private final MerchantBusinessProfileRepository profileRepository;
     private final MerchantStoreMemberRepository memberRepository;
     private final MerchantDocumentRepository documentRepository;
@@ -57,6 +61,7 @@ public class MediaUploadService implements MediaUploadServicePort {
         validateMedia(request.getPurpose(), contentType, request.getFileSize());
         MediaTarget target = resolveTarget(requester, request);
         validateGalleryLimit(request.getPurpose(), target);
+        validateBagImageLimit(request.getPurpose(), target);
 
         String key = objectKey(requesterId, target, request.getPurpose(), contentType);
         String publicUrl = request.getPurpose().isPrivateObject() ? null : s3Properties.publicUrl(key);
@@ -90,6 +95,7 @@ public class MediaUploadService implements MediaUploadServicePort {
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = {"store-detail", "store-by-slug", "store-list"}, allEntries = true),
+            @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true),
             @CacheEvict(value = "user-profile", key = "#requesterId")
     })
     public MediaUploadResponse confirmUpload(UUID requesterId, ConfirmMediaUploadRequest request) {
@@ -136,6 +142,11 @@ public class MediaUploadService implements MediaUploadServicePort {
             Store store = accessibleStore(requester, request.getTargetId());
             return new MediaTarget(MediaTargetType.STORE, store.getId());
         }
+        if (purpose == MediaPurpose.BAG_IMAGE) {
+            requireTarget(request, MediaTargetType.BAG);
+            SurpriseBag bag = accessibleBag(requester, request.getTargetId());
+            return new MediaTarget(MediaTargetType.BAG, bag.getId());
+        }
         if (purpose.isBusinessDocument()) {
             requireTarget(request, MediaTargetType.BUSINESS_PROFILE);
             if (!requester.hasRole(UserRole.MERCHANT_OWNER)) {
@@ -153,6 +164,16 @@ public class MediaUploadService implements MediaUploadServicePort {
             throw new ApiException(ErrorCode.MISSING_REQUIRED_FIELD, "Thiếu targetType hoặc targetId");
         }
         return new MediaTarget(request.getTargetType(), request.getTargetId());
+    }
+
+    private SurpriseBag accessibleBag(User requester, UUID bagId) {
+        SurpriseBag bag = bagRepository.findById(bagId)
+                .orElseThrow(() -> new ApiException(ErrorCode.BAG_NOT_FOUND));
+        if (bag.getStatus() == BagStatus.ARCHIVED) {
+            throw new ApiException(ErrorCode.BAG_NOT_FOUND);
+        }
+        accessibleStore(requester, bag.getStore().getId());
+        return bag;
     }
 
     private Store accessibleStore(User requester, UUID storeId) {
@@ -192,6 +213,15 @@ public class MediaUploadService implements MediaUploadServicePort {
                 default -> throw new ApiException(ErrorCode.INVALID_INPUT);
             }
             storeRepository.save(store);
+        } else if (upload.getPurpose() == MediaPurpose.BAG_IMAGE) {
+            SurpriseBag bag = accessibleBag(getUser(requesterId), upload.getTargetId());
+            List<String> photos = new ArrayList<>(
+                    bag.getPhotos() == null ? List.of() : Arrays.asList(bag.getPhotos()));
+            if (!photos.contains(upload.getObjectKey())) {
+                photos.add(upload.getObjectKey());
+                bag.setPhotos(photos.toArray(String[]::new));
+                bagRepository.save(bag);
+            }
         } else if (upload.getPurpose() == MediaPurpose.USER_AVATAR) {
             User user = getUser(requesterId);
             user.setAvatarUrl(upload.getPublicUrl());
@@ -226,6 +256,14 @@ public class MediaUploadService implements MediaUploadServicePort {
                 && mediaUploadRepository.countByTargetTypeAndTargetIdAndPurpose(
                 target.type(), target.id(), purpose) >= 5) {
             throw new ApiException(ErrorCode.INVALID_INPUT, "Tối đa 5 ảnh món ăn mẫu");
+        }
+    }
+
+    private void validateBagImageLimit(MediaPurpose purpose, MediaTarget target) {
+        if (purpose == MediaPurpose.BAG_IMAGE
+                && mediaUploadRepository.countByTargetTypeAndTargetIdAndPurpose(
+                target.type(), target.id(), purpose) >= 5) {
+            throw new ApiException(ErrorCode.INVALID_INPUT, "Tui toi da 5 anh");
         }
     }
 

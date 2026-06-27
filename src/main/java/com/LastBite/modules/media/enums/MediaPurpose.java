@@ -6,6 +6,7 @@ public enum MediaPurpose {
     STORE_STOREFRONT(MediaType.IMAGE, true, false),
     STORE_MENU(MediaType.IMAGE, true, false),
     STORE_GALLERY(MediaType.IMAGE, true, false),
+    BAG_IMAGE(MediaType.IMAGE, false, false),
     BUSINESS_LICENSE(MediaType.IMAGE, false, true),
     REPRESENTATIVE_ID(MediaType.IMAGE, false, true),
     AUTHORIZATION_LETTER(MediaType.IMAGE, false, true),
