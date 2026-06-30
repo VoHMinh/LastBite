@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,9 +21,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface OrderRepository extends JpaRepository<Order, UUID> {
+public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
 
     Optional<Order> findByUser_IdAndIdempotencyKey(UUID userId, String idempotencyKey);
+
+    @Query("SELECT o FROM Order o JOIN FETCH o.bag WHERE o.user.id = :userId AND o.status = :status")
+    List<Order> findByUserIdAndStatus(@Param("userId") UUID userId, @Param("status") OrderStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -44,8 +48,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
         WHERE o.user.id = :userId
           AND (:status IS NULL OR o.status = :status)
           AND (:refundStatus IS NULL OR o.refundStatus = :refundStatus)
-          AND (:pickupDateFrom IS NULL OR o.pickupDate >= :pickupDateFrom)
-          AND (:pickupDateTo IS NULL OR o.pickupDate <= :pickupDateTo)
+          AND (COALESCE(:pickupDateFrom, o.pickupDate) <= o.pickupDate)
+          AND (COALESCE(:pickupDateTo, o.pickupDate) >= o.pickupDate)
     """)
     Page<Order> searchCustomerOrders(@Param("userId") UUID userId,
                                      @Param("status") OrderStatus status,
@@ -54,16 +58,18 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
                                      @Param("pickupDateTo") LocalDate pickupDateTo,
                                      Pageable pageable);
 
-    @EntityGraph(attributePaths = {"user", "store", "bag", "dailyStock"})
-    @Query("""
+    @Query(value = """
         SELECT o FROM Order o
+        JOIN FETCH o.user
+        JOIN FETCH o.store
+        JOIN FETCH o.bag
+        JOIN FETCH o.dailyStock
         WHERE o.store.id = :storeId
-          AND (:pickupDate IS NULL OR o.pickupDate = :pickupDate)
-          AND (:status IS NULL OR o.status = :status)
-    """)
+          AND o.pickupDate = :pickupDate
+        """,
+        countProjection = "COUNT(o.id)")
     Page<Order> searchStoreOrders(@Param("storeId") UUID storeId,
                                   @Param("pickupDate") LocalDate pickupDate,
-                                  @Param("status") OrderStatus status,
                                   Pageable pageable);
 
     @EntityGraph(attributePaths = {"user", "store", "bag", "dailyStock"})
