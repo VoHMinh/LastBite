@@ -1,6 +1,7 @@
 package com.LastBite.modules.bag.controller;
 
 import com.LastBite.common.response.ApiResponse;
+import com.LastBite.modules.analytics.service.StoreEngagementAnalyticsService;
 import com.LastBite.modules.bag.dto.response.PublicBagDetailResponse;
 import com.LastBite.modules.bag.dto.response.PublicBagSummaryResponse;
 import com.LastBite.modules.bag.enums.BagType;
@@ -9,6 +10,7 @@ import com.LastBite.modules.bag.service.BagDiscoveryServicePort;
 import com.LastBite.modules.store.enums.StoreCategory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,6 +27,7 @@ import java.util.UUID;
 public class BagPublicController {
 
     private final BagDiscoveryServicePort discoveryService;
+    private final StoreEngagementAnalyticsService analyticsService;
 
     @GetMapping("/today")
     @Operation(summary = "Lấy danh sách túi hôm nay trong bán kính X km")
@@ -80,8 +83,13 @@ public class BagPublicController {
     @GetMapping("/{bagId}")
     @Operation(summary = "Lấy chi tiết túi hôm nay")
     public ResponseEntity<ApiResponse<PublicBagDetailResponse>> detail(@AuthenticationPrincipal Jwt jwt,
-                                                                       @PathVariable UUID bagId) {
-        return ResponseEntity.ok(ApiResponse.ok(discoveryService.detail(bagId, extractUserId(jwt))));
+                                                                       @PathVariable UUID bagId,
+                                                                       @RequestParam(required = false) String source,
+                                                                       HttpServletRequest request) {
+        UUID userId = extractUserId(jwt);
+        PublicBagDetailResponse response = discoveryService.detail(bagId, userId);
+        analyticsService.recordBagViewSafely(response.getStoreId(), response.getBagId(), userId, source, request);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     private UUID extractUserId(Jwt jwt) {
