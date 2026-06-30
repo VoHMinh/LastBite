@@ -76,8 +76,8 @@ class MediaUploadServiceTest {
     @BeforeEach
     void setUp() {
         service = new MediaUploadService(
-                mediaUploadRepository, userRepository, storeRepository, bagRepository, profileRepository,
-                memberRepository, documentRepository, storageService, mediaUrlService, properties, clock);
+                mediaUploadRepository, userRepository, storeRepository, bagRepository,
+                profileRepository, memberRepository, documentRepository, storageService, mediaUrlService, properties, clock);
         ownerId = UUID.randomUUID();
         owner = merchantOwner();
         owner.setId(ownerId);
