@@ -14,6 +14,8 @@ public interface BagPriceTierRepository extends JpaRepository<BagPriceTier, UUID
 
     Optional<BagPriceTier> findByCategoryAndBagSizeAndActiveTrue(StoreCategory category, BagSize bagSize);
 
+    List<BagPriceTier> findAllByCategoryAndBagSizeAndActiveTrue(StoreCategory category, BagSize bagSize);
+
     Optional<BagPriceTier> findByCategoryAndBagSize(StoreCategory category, BagSize bagSize);
 
     boolean existsByCategoryAndBagSize(StoreCategory category, BagSize bagSize);
@@ -21,6 +23,8 @@ public interface BagPriceTierRepository extends JpaRepository<BagPriceTier, UUID
     List<BagPriceTier> findByActiveTrueOrderByCategoryAscBagSizeAsc();
 
     List<BagPriceTier> findByCategoryAndActiveTrueOrderByBagSizeAsc(StoreCategory category);
+
+    List<BagPriceTier> findByBagSizeAndActiveTrueOrderByCategoryAsc(BagSize bagSize);
 
     @Query("SELECT DISTINCT t.category FROM BagPriceTier t WHERE t.active = true ORDER BY t.category")
     List<StoreCategory> findDistinctActiveCategoriesOrderByCategory();

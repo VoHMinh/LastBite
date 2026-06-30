@@ -26,6 +26,7 @@ public class NotificationDeviceController {
     private final NotificationDeviceService deviceService;
 
     @PostMapping
+    @Operation(operationId = "registerNotificationDevice", summary = "Đăng ký thiết bị nhận push notification")
     public ResponseEntity<ApiResponse<NotificationDeviceResponse>> register(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody RegisterNotificationDeviceRequest request) {
@@ -35,11 +36,13 @@ public class NotificationDeviceController {
     }
 
     @GetMapping
+    @Operation(operationId = "listNotificationDevices", summary = "Lấy danh sách thiết bị đã đăng ký của user")
     public ResponseEntity<ApiResponse<List<NotificationDeviceResponse>>> list(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(ApiResponse.ok(deviceService.listActive(extractUserId(jwt))));
     }
 
     @DeleteMapping("/{deviceId}")
+    @Operation(operationId = "deactivateNotificationDevice", summary = "Hủy đăng ký một thiết bị")
     public ResponseEntity<ApiResponse<Void>> deactivate(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID deviceId) {
@@ -48,6 +51,7 @@ public class NotificationDeviceController {
     }
 
     @DeleteMapping
+    @Operation(operationId = "deactivateAllNotificationDevices", summary = "Hủy đăng ký tất cả thiết bị của user")
     public ResponseEntity<ApiResponse<Void>> deactivateAll(@AuthenticationPrincipal Jwt jwt) {
         deviceService.deactivateAll(extractUserId(jwt));
         return ResponseEntity.ok(ApiResponse.ok());

@@ -27,7 +27,7 @@ public class BagPublicController {
     private final BagDiscoveryServicePort discoveryService;
 
     @GetMapping("/today")
-    @Operation(summary = "Lấy danh sách túi hôm nay trong bán kính X km")
+    @Operation(operationId = "getTodayBags", summary = "Lấy danh sách túi hôm nay trong bán kính X km")
     public ResponseEntity<ApiResponse<List<PublicBagSummaryResponse>>> today(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) Double lat,
@@ -42,7 +42,7 @@ public class BagPublicController {
     }
 
     @GetMapping("/nearby")
-    @Operation(summary = "Tìm túi gần khách hoặc fallback theo quận")
+    @Operation(operationId = "getNearbyBags", summary = "Tìm túi gần khách hoặc fallback theo quận")
     public ResponseEntity<ApiResponse<List<PublicBagSummaryResponse>>> nearby(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) Double lat,
@@ -60,7 +60,7 @@ public class BagPublicController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Tim kiem tui voi ranking relevance")
+    @Operation(operationId = "searchBags", summary = "Tim kiem tui voi ranking relevance")
     public ResponseEntity<ApiResponse<List<PublicBagSummaryResponse>>> search(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) String q,
@@ -78,7 +78,7 @@ public class BagPublicController {
                         extractUserId(jwt), q, lat, lng, radius, category, dietType, bagType, district, sort, limit)));
     }
     @GetMapping("/{bagId}")
-    @Operation(summary = "Lấy chi tiết túi hôm nay")
+    @Operation(operationId = "getBagDetail", summary = "Lấy chi tiết túi hôm nay")
     public ResponseEntity<ApiResponse<PublicBagDetailResponse>> detail(@AuthenticationPrincipal Jwt jwt,
                                                                        @PathVariable UUID bagId) {
         return ResponseEntity.ok(ApiResponse.ok(discoveryService.detail(bagId, extractUserId(jwt))));
