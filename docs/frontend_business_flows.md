@@ -196,6 +196,8 @@ Riêng một số endpoint Spring Data trả trực tiếp `Page<T>` trong `resu
 | `POST` | `/api/v1/media/uploads/presigned-url` | Authenticated | Xin S3 pre-signed PUT URL |
 | `POST` | `/api/v1/media/uploads/confirm` | Authenticated | Confirm file đã upload |
 | `GET` | `/api/v1/media/uploads/{uploadId}/access-url` | Authenticated owner/admin | Lấy signed GET URL cho private document |
+| `GET` | `/api/v1/merchant/business-profile/documents` | `MERCHANT_OWNER` | List business profile documents |
+| `DELETE` | `/api/v1/merchant/business-profile/documents/{documentId}` | `MERCHANT_OWNER` | Delete unapproved business document |
 
 ### Media purposes hiện có
 
@@ -232,6 +234,7 @@ Riêng một số endpoint Spring Data trả trực tiếp `Page<T>` trong `resu
 - Không tự ghi image URL vào store nếu đã dùng media flow; hãy confirm upload để backend set field đúng.
 - Private documents không có `publicUrl`; admin/owner lấy signed GET URL qua `/access-url`.
 - Review photo phải upload với `FEEDBACK_IMAGE`, confirm xong mới lấy `uploadId` đưa vào review request.
+- To replace a business document, upload again with the same business document `purpose`. Confirming the upload creates a new `MerchantDocument` in `PENDING_REVIEW` and removes older unapproved documents of the same type. Already approved documents are kept for audit.
 
 ## 4. Merchant Onboarding, Business Profile, Store Review
 
@@ -242,6 +245,8 @@ Riêng một số endpoint Spring Data trả trực tiếp `Page<T>` trong `resu
 | `POST` | `/api/v1/merchant/business-profile` | `MERCHANT_OWNER` | Tạo business profile |
 | `GET` | `/api/v1/merchant/business-profile` | `MERCHANT_OWNER` | Lấy business profile |
 | `PUT` | `/api/v1/merchant/business-profile` | `MERCHANT_OWNER` | Cập nhật business profile |
+| `GET` | `/api/v1/merchant/business-profile/documents` | `MERCHANT_OWNER` | List business profile documents |
+| `DELETE` | `/api/v1/merchant/business-profile/documents/{documentId}` | `MERCHANT_OWNER` | Delete unapproved business document |
 | `GET` | `/api/v1/merchant/bank-accounts` | `MERCHANT_OWNER` | List bank accounts |
 | `POST` | `/api/v1/merchant/bank-accounts` | `MERCHANT_OWNER` | Tạo bank account |
 | `GET` | `/api/v1/merchant/stores` | `MERCHANT_OWNER` | List stores của owner |

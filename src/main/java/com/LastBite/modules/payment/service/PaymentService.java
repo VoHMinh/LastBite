@@ -153,11 +153,43 @@ public class PaymentService {
         String eventKey = "PAYOS:" + providerOrderCode + ":" + reference + ":" + amount + ":"
                 + HashUtil.sha256(payload).substring(0, 16);
 
-        PaymentWebhook webhook = webhookRepository.findByEventKey(eventKey)
+        if (!valid || providerOrderCode == null || amount == null) {
+            PaymentWebhook webhook = webhookRepository.findByEventKeyForUpdate(eventKey)
+                    .orElseGet(() -> webhookRepository.save(PaymentWebhook.builder()
+                            .provider(PaymentProvider.PAYOS)
+                            .eventKey(eventKey)
+                            .providerOrderCode(providerOrderCode)
+                            .signature(request.getSignature())
+                            .payload(payload)
+                            .validSignature(valid)
+                            .processed(false)
+                            .build()));
+            markWebhookIgnored(webhook, !valid ? "Invalid PayOS signature" : "Malformed PayOS webhook data");
+            return;
+        }
+
+        Optional<Payment> paymentResult = paymentRepository.findByProviderOrderCodeForUpdate(providerOrderCode);
+        if (paymentResult.isEmpty()) {
+            PaymentWebhook webhook = webhookRepository.findByEventKeyForUpdate(eventKey)
+                    .orElseGet(() -> webhookRepository.save(PaymentWebhook.builder()
+                            .provider(PaymentProvider.PAYOS)
+                            .eventKey(eventKey)
+                            .providerOrderCode(providerOrderCode)
+                            .signature(request.getSignature())
+                            .payload(payload)
+                            .validSignature(true)
+                            .processed(false)
+                            .build()));
+            markWebhookIgnored(webhook, "Unknown PayOS orderCode");
+            return;
+        }
+        Payment payment = paymentResult.get();
+        PaymentWebhook webhook = webhookRepository.findByEventKeyForUpdate(eventKey)
                 .orElseGet(() -> webhookRepository.save(PaymentWebhook.builder()
                         .provider(PaymentProvider.PAYOS)
                         .eventKey(eventKey)
                         .providerOrderCode(providerOrderCode)
+                        .payment(payment)
                         .signature(request.getSignature())
                         .payload(payload)
                         .validSignature(valid)
@@ -166,17 +198,6 @@ public class PaymentService {
         if (webhook.isProcessed()) {
             return;
         }
-        if (!valid || providerOrderCode == null || amount == null) {
-            markWebhookIgnored(webhook, !valid ? "Invalid PayOS signature" : "Malformed PayOS webhook data");
-            return;
-        }
-
-        Optional<Payment> paymentResult = paymentRepository.findByProviderOrderCode(providerOrderCode);
-        if (paymentResult.isEmpty()) {
-            markWebhookIgnored(webhook, "Unknown PayOS orderCode");
-            return;
-        }
-        Payment payment = paymentResult.get();
         webhook.setPayment(payment);
 
         if (payment.getAmount().compareTo(amount) != 0) {
@@ -186,7 +207,7 @@ public class PaymentService {
 
         if (request.isSuccess() && "00".equals(request.getCode())) {
             applySuccessfulPayment(payment, reference, request);
-        } else {
+        } else if (payment.getStatus() == PaymentStatus.PENDING) {
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason(request.getDesc());
             notificationService.notifyPaymentFailed(payment.getOrder());
@@ -206,7 +227,12 @@ public class PaymentService {
     public int expirePendingPayments() {
         Instant now = Instant.now(clock);
         int expired = 0;
-        for (Payment payment : paymentRepository.findByStatusAndExpiresAtLessThanEqual(PaymentStatus.PENDING, now)) {
+        for (Payment candidate : paymentRepository.findByStatusAndExpiresAtLessThanEqual(PaymentStatus.PENDING, now)) {
+            Payment payment = paymentRepository.findByIdForUpdate(candidate.getId()).orElse(null);
+            if (payment == null || payment.getStatus() != PaymentStatus.PENDING
+                    || payment.getExpiresAt().isAfter(now)) {
+                continue;
+            }
             Order order = orderRepository.findByIdForUpdate(payment.getOrder().getId()).orElse(null);
             if (order == null || order.getStatus() != OrderStatus.PENDING_PAYMENT) {
                 continue;
@@ -232,6 +258,10 @@ public class PaymentService {
 
     public Optional<Payment> findByOrderId(UUID orderId) {
         return paymentRepository.findByOrderId(orderId);
+    }
+
+    public Optional<Payment> findByOrderIdForUpdate(UUID orderId) {
+        return paymentRepository.findByOrderIdForUpdate(orderId);
     }
 
     @Transactional
