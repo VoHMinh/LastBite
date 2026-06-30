@@ -28,6 +28,7 @@ public class AdminReviewController {
     private final ReviewService reviewService;
 
     @GetMapping("/reports")
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listReviewReports")
     public ResponseEntity<ApiResponse<Page<ReviewReportResponse>>> reports(
             @RequestParam(required = false) ReviewReportStatus status,
             @RequestParam(defaultValue = "0") int page,
