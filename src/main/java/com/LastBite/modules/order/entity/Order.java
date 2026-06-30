@@ -17,9 +17,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "orders", indexes = {
+@Table(name = "orders", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_orders_user_idempotency", columnNames = {"user_id", "idempotency_key"})
+}, indexes = {
         @Index(name = "idx_orders_order_number", columnList = "order_number", unique = true),
-        @Index(name = "idx_orders_idempotency_key", columnList = "idempotency_key", unique = true),
+        @Index(name = "idx_orders_idempotency_key", columnList = "idempotency_key"),
         @Index(name = "idx_orders_user_id", columnList = "user_id"),
         @Index(name = "idx_orders_store_id", columnList = "store_id"),
         @Index(name = "idx_orders_status", columnList = "status"),
@@ -120,6 +122,6 @@ public class Order extends BaseEntity {
     @Column(name = "pickup_code_hash", length = 128)
     private String pickupCodeHash;
 
-    @Column(name = "idempotency_key", nullable = false, unique = true, length = 100)
+    @Column(name = "idempotency_key", nullable = false, length = 100)
     private String idempotencyKey;
 }

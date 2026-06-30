@@ -192,6 +192,7 @@ class OrderServiceTest {
         Order order = order(OrderStatus.PENDING_PAYMENT, LocalTime.of(21, 0), Instant.now(clock).plusSeconds(600));
         Payment payment = payment(order, PaymentStatus.PENDING, Instant.now(clock).plusSeconds(600));
         when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
+        when(paymentService.findByOrderIdForUpdate(order.getId())).thenReturn(Optional.of(payment));
         when(paymentService.findByOrderId(order.getId())).thenReturn(Optional.of(payment));
 
         var response = service.cancel(userId, order.getId());
@@ -207,6 +208,7 @@ class OrderServiceTest {
         Order order = order(OrderStatus.PENDING_PAYMENT, LocalTime.of(21, 0), Instant.now(clock).minusSeconds(1));
         Payment payment = payment(order, PaymentStatus.PENDING, Instant.now(clock).minusSeconds(1));
         when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
+        when(paymentService.findByOrderIdForUpdate(order.getId())).thenReturn(Optional.of(payment));
         when(paymentService.findByOrderId(order.getId())).thenReturn(Optional.of(payment));
 
         assertThrows(ApiException.class, () -> service.cancel(userId, order.getId()));
@@ -220,6 +222,7 @@ class OrderServiceTest {
         Order order = order(OrderStatus.PAID, LocalTime.of(23, 0), Instant.now(clock).plusSeconds(600));
         Payment payment = payment(order, PaymentStatus.SUCCEEDED, Instant.now(clock).plusSeconds(600));
         when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
+        when(paymentService.findByOrderIdForUpdate(order.getId())).thenReturn(Optional.of(payment));
         when(paymentService.findByOrderId(order.getId())).thenReturn(Optional.of(payment));
 
         var response = service.cancel(userId, order.getId());
@@ -234,6 +237,7 @@ class OrderServiceTest {
         Order order = order(OrderStatus.PAID, LocalTime.of(21, 30), Instant.now(clock).plusSeconds(600));
         Payment payment = payment(order, PaymentStatus.SUCCEEDED, Instant.now(clock).plusSeconds(600));
         when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
+        when(paymentService.findByOrderIdForUpdate(order.getId())).thenReturn(Optional.of(payment));
         when(paymentService.findByOrderId(order.getId())).thenReturn(Optional.of(payment));
 
         assertThrows(ApiException.class, () -> service.cancel(userId, order.getId()));

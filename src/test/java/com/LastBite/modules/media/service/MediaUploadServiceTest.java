@@ -23,7 +23,9 @@ import com.LastBite.modules.media.enums.MediaUploadStatus;
 import com.LastBite.modules.media.repository.MediaUploadRepository;
 import com.LastBite.modules.media.service.impl.MediaUploadService;
 import com.LastBite.modules.merchant.entity.MerchantBusinessProfile;
+import com.LastBite.modules.merchant.entity.MerchantDocument;
 import com.LastBite.modules.merchant.enums.BusinessLegalType;
+import com.LastBite.modules.merchant.enums.ReviewStatus;
 import com.LastBite.modules.merchant.repository.MerchantBusinessProfileRepository;
 import com.LastBite.modules.merchant.repository.MerchantDocumentRepository;
 import com.LastBite.modules.merchant.repository.MerchantStoreMemberRepository;
@@ -36,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -70,6 +73,7 @@ class MediaUploadServiceTest {
     private MediaUploadService service;
     private UUID ownerId;
     private User owner;
+    private MerchantBusinessProfile profile;
     private Store store;
     private SurpriseBag bag;
 
@@ -82,7 +86,7 @@ class MediaUploadServiceTest {
         owner = merchantOwner();
         owner.setId(ownerId);
 
-        MerchantBusinessProfile profile = MerchantBusinessProfile.builder()
+        profile = MerchantBusinessProfile.builder()
                 .owner(owner)
                 .legalType(BusinessLegalType.INDIVIDUAL)
                 .representativeFullName("Test Owner")
@@ -106,6 +110,7 @@ class MediaUploadServiceTest {
         bag.setId(UUID.randomUUID());
 
         when(userRepository.findById(ownerId)).thenReturn(Optional.of(owner));
+        when(profileRepository.findById(profile.getId())).thenReturn(Optional.of(profile));
         when(storeRepository.findDetailById(store.getId())).thenReturn(Optional.of(store));
         when(bagRepository.findById(bag.getId())).thenReturn(Optional.of(bag));
         when(storageService.createPresignedPutUrl(any(), any(), any(), any()))
@@ -203,6 +208,36 @@ class MediaUploadServiceTest {
         verify(bagRepository).save(bag);
     }
 
+    @Test
+    void confirmsBusinessDocumentAndRemovesOlderUnapprovedDocumentOfSameType() {
+        String key = "private/business_profile/" + profile.getId() + "/" + ownerId + "/representative_id/a.jpg";
+        MediaUpload upload = pendingBusinessDocumentUpload(key);
+        MerchantDocument oldDocument = MerchantDocument.builder()
+                .businessProfile(profile)
+                .mediaUpload(upload)
+                .documentType(MediaPurpose.REPRESENTATIVE_ID.name())
+                .reviewStatus(ReviewStatus.REJECTED)
+                .build();
+        oldDocument.setId(UUID.randomUUID());
+
+        when(mediaUploadRepository.findByIdAndOwnerId(upload.getId(), ownerId))
+                .thenReturn(Optional.of(upload));
+        when(storageService.objectExists("lastbite", key)).thenReturn(true);
+        when(documentRepository.existsByMediaUploadId(upload.getId())).thenReturn(false);
+        when(documentRepository.findAllByBusinessProfileIdAndDocumentTypeAndReviewStatusNot(
+                profile.getId(), MediaPurpose.REPRESENTATIVE_ID.name(), ReviewStatus.APPROVED))
+                .thenReturn(List.of(oldDocument));
+
+        ConfirmMediaUploadRequest request = new ConfirmMediaUploadRequest();
+        request.setUploadId(upload.getId());
+        request.setKey(key);
+
+        service.confirmUpload(ownerId, request);
+
+        verify(documentRepository).deleteAll(List.of(oldDocument));
+        verify(documentRepository).save(any(MerchantDocument.class));
+    }
+
     private CreatePresignedUploadRequest request(
             String fileName, String contentType, long fileSize) {
         CreatePresignedUploadRequest request = new CreatePresignedUploadRequest();
@@ -257,6 +292,24 @@ class MediaUploadServiceTest {
                 .publicUrl("https://lastbite.s3.amazonaws.com/" + key)
                 .contentType("image/jpeg")
                 .fileSize(1000)
+                .status(MediaUploadStatus.PENDING)
+                .build();
+        upload.setId(UUID.randomUUID());
+        return upload;
+    }
+
+    private MediaUpload pendingBusinessDocumentUpload(String key) {
+        MediaUpload upload = MediaUpload.builder()
+                .owner(owner)
+                .purpose(MediaPurpose.REPRESENTATIVE_ID)
+                .mediaType(MediaType.IMAGE)
+                .targetType(MediaTargetType.BUSINESS_PROFILE)
+                .targetId(profile.getId())
+                .bucket("lastbite")
+                .objectKey(key)
+                .contentType("image/jpeg")
+                .fileSize(1000)
+                .privateObject(true)
                 .status(MediaUploadStatus.PENDING)
                 .build();
         upload.setId(UUID.randomUUID());

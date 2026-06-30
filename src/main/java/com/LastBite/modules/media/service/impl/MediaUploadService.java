@@ -230,6 +230,12 @@ public class MediaUploadService implements MediaUploadServicePort {
                 && !documentRepository.existsByMediaUploadId(upload.getId())) {
             var profile = profileRepository.findById(upload.getTargetId())
                     .orElseThrow(() -> new ApiException(ErrorCode.RESOURCE_NOT_FOUND));
+            var supersededDocuments = documentRepository
+                    .findAllByBusinessProfileIdAndDocumentTypeAndReviewStatusNot(
+                            profile.getId(), upload.getPurpose().name(), ReviewStatus.APPROVED);
+            if (!supersededDocuments.isEmpty()) {
+                documentRepository.deleteAll(supersededDocuments);
+            }
             documentRepository.save(MerchantDocument.builder()
                     .businessProfile(profile)
                     .mediaUpload(upload)
