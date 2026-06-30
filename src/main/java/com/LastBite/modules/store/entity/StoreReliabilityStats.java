@@ -25,7 +25,7 @@ public class StoreReliabilityStats {
 
     @Id
     @Column(name = "store_id")
-    private UUID storeId;
+    private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId

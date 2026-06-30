@@ -33,7 +33,7 @@ public class StorePublicController {
     private final BagDiscoveryServicePort bagDiscoveryService;
 
     @GetMapping
-    @Operation(summary = "Tìm kiếm cửa hàng đang hoạt động và đã xác minh")
+    @Operation(operationId = "searchStores", summary = "Tìm kiếm cửa hàng đang hoạt động và đã xác minh")
     public ResponseEntity<ApiResponse<Page<StoreResponse>>> searchStores(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) StoreCategory category,
@@ -50,6 +50,12 @@ public class StorePublicController {
     @Operation(summary = "Lấy chi tiết cửa hàng công khai theo slug")
     public ResponseEntity<ApiResponse<PublicStoreDetailResponse>> getStoreBySlug(@PathVariable String slug) {
         return ResponseEntity.ok(ApiResponse.ok(storeQueryService.getStoreBySlug(slug)));
+    }
+
+    @GetMapping("/id/{storeId}")
+    @Operation(summary = "Lấy chi tiết cửa hàng công khai theo ID")
+    public ResponseEntity<ApiResponse<PublicStoreDetailResponse>> getStoreById(@PathVariable UUID storeId) {
+        return ResponseEntity.ok(ApiResponse.ok(storeQueryService.getStoreById(storeId)));
     }
 
     @GetMapping("/{storeId}/bags")

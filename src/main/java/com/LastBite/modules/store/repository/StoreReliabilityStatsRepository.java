@@ -13,6 +13,6 @@ import java.util.UUID;
 public interface StoreReliabilityStatsRepository extends JpaRepository<StoreReliabilityStats, UUID> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM StoreReliabilityStats s WHERE s.storeId = :storeId")
+    @Query("SELECT s FROM StoreReliabilityStats s WHERE s.id = :storeId")
     Optional<StoreReliabilityStats> findByStoreIdForUpdate(@Param("storeId") UUID storeId);
 }
