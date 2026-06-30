@@ -32,6 +32,7 @@ public class AdminVoucherCampaignController {
     private final VoucherCampaignService campaignService;
 
     @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listAdminVoucherCampaigns")
     public ResponseEntity<ApiResponse<PageResponse<VoucherCampaignResponse>>> list(
             @RequestParam(required = false) VoucherCampaignStatus status,
             @RequestParam(required = false) VoucherCampaignOwnerType ownerType,
