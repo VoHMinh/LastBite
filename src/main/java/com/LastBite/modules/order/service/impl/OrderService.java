@@ -96,6 +96,11 @@ public class OrderService implements OrderServicePort {
         LocalTime now = LocalTime.now(clock);
         BagDailyStock stock = stockRepository.findByBagIdAndDateForUpdate(request.getBagId(), today)
                 .orElseThrow(() -> new ApiException(ErrorCode.STOCK_NOT_FOUND, "Tui chua mo ban hom nay"));
+        existingOrder = orderRepository.findByUser_IdAndIdempotencyKey(userId, idempotencyKey);
+        if (existingOrder.isPresent()) {
+            Order order = existingOrder.get();
+            return toResponse(order, paymentService.findByOrderId(order.getId()).orElse(null), null);
+        }
         SurpriseBag bag = stock.getBag();
 
         validateOrderable(stock, bag, request.getQuantity(), now);
@@ -186,6 +191,7 @@ public class OrderService implements OrderServicePort {
     @Transactional
     @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public OrderResponse cancel(UUID userId, UUID orderId) {
+        Payment payment = paymentService.findByOrderIdForUpdate(orderId).orElse(null);
         Order order = orderRepository.findByIdForUpdate(orderId)
                 .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
         if (!order.getUser().getId().equals(userId)) {
@@ -198,7 +204,6 @@ public class OrderService implements OrderServicePort {
             throw new ApiException(ErrorCode.INVALID_INPUT, "Don hang khong the huy o trang thai hien tai");
         }
         OrderStatus previous = order.getStatus();
-        Payment payment = paymentService.findByOrderId(orderId).orElse(null);
         if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
             ensurePendingPaymentCanBeCancelled(order, payment);
             releaseReservedStock(order, "Khach huy truoc khi thanh toan");

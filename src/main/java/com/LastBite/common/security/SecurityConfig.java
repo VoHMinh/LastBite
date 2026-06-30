@@ -25,10 +25,8 @@ import java.time.Instant;
 /**
  * Cấu hình bảo mật trung tâm — <b>một filter chain duy nhất</b>.
  * <p>
- * ObjectMapper được tạo dưới dạng {@code private static final}, không inject.
- * SecurityConfig tải trước auto-configuration của Jackson nên inject bean
- * qua constructor hoặc method parameter có thể lỗi. Field static final được
- * JVM classloader khởi tạo, không phụ thuộc Spring hoặc Lombok.
+ * SecurityConfig dùng ObjectMapper bean chung để response lỗi 401/403 giữ đúng
+ * contract ApiResponse của toàn hệ thống.
  */
 @Configuration
 @EnableWebSecurity
@@ -38,9 +36,7 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthConverter jwtAuthConverter;
-
-    /** ObjectMapper độc lập — không phải Spring bean, không bị Lombok xử lý. */
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper objectMapper;
 
     /** Endpoint công khai KHÔNG yêu cầu xác thực. */
     private static final String[] PUBLIC_ENDPOINTS = {
@@ -105,6 +101,8 @@ public class SecurityConfig {
                         // Discovery túi công khai (chỉ GET)
                         .requestMatchers(HttpMethod.GET, "/api/v1/bags/**").permitAll()
 
+                        .requestMatchers(HttpMethod.POST, "/api/v1/analytics/engagement-events").permitAll()
+
                         // Kiểm tra health
                         .requestMatchers("/actuator/health").permitAll()
 
@@ -133,11 +131,11 @@ public class SecurityConfig {
 
     // ── Error handlers ──
 
-    private static AuthenticationEntryPoint unauthorizedEntryPoint() {
+    private AuthenticationEntryPoint unauthorizedEntryPoint() {
         return (req, res, authEx) -> {
             res.setStatus(HttpStatus.UNAUTHORIZED.value());
             res.setContentType("application/json;charset=UTF-8");
-            OBJECT_MAPPER.writeValue(res.getOutputStream(),
+            objectMapper.writeValue(res.getOutputStream(),
                     ApiResponse.builder()
                             .code(ErrorCode.UNAUTHENTICATED.getCode())
                             .message(ErrorCode.UNAUTHENTICATED.getDefaultMessage())
@@ -147,11 +145,11 @@ public class SecurityConfig {
         };
     }
 
-    private static AccessDeniedHandler forbiddenHandler() {
+    private AccessDeniedHandler forbiddenHandler() {
         return (req, res, denied) -> {
             res.setStatus(HttpStatus.FORBIDDEN.value());
             res.setContentType("application/json;charset=UTF-8");
-            OBJECT_MAPPER.writeValue(res.getOutputStream(),
+            objectMapper.writeValue(res.getOutputStream(),
                     ApiResponse.builder()
                             .code(ErrorCode.FORBIDDEN.getCode())
                             .message(ErrorCode.FORBIDDEN.getDefaultMessage())

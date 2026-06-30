@@ -1,6 +1,7 @@
 package com.LastBite.modules.store.controller;
 
 import com.LastBite.common.response.ApiResponse;
+import com.LastBite.modules.analytics.service.StoreEngagementAnalyticsService;
 import com.LastBite.modules.bag.dto.response.PublicBagSummaryResponse;
 import com.LastBite.modules.bag.service.BagDiscoveryServicePort;
 import com.LastBite.modules.store.dto.response.PublicStoreDetailResponse;
@@ -9,11 +10,14 @@ import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.service.StoreQueryServicePort;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +35,7 @@ public class StorePublicController {
 
     private final StoreQueryServicePort storeQueryService;
     private final BagDiscoveryServicePort bagDiscoveryService;
+    private final StoreEngagementAnalyticsService analyticsService;
 
     @GetMapping
     @Operation(operationId = "searchStores", summary = "Tìm kiếm cửa hàng đang hoạt động và đã xác minh")
@@ -48,8 +53,14 @@ public class StorePublicController {
 
     @GetMapping("/{slug}")
     @Operation(summary = "Lấy chi tiết cửa hàng công khai theo slug")
-    public ResponseEntity<ApiResponse<PublicStoreDetailResponse>> getStoreBySlug(@PathVariable String slug) {
-        return ResponseEntity.ok(ApiResponse.ok(storeQueryService.getStoreBySlug(slug)));
+    public ResponseEntity<ApiResponse<PublicStoreDetailResponse>> getStoreBySlug(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String slug,
+            @RequestParam(required = false) String source,
+            HttpServletRequest request) {
+        PublicStoreDetailResponse response = storeQueryService.getStoreBySlug(slug);
+        analyticsService.recordStoreViewSafely(response.getId(), extractUserId(jwt), source, request);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     @GetMapping("/id/{storeId}")
@@ -64,5 +75,9 @@ public class StorePublicController {
             @PathVariable UUID storeId,
             @RequestParam(required = false) Integer limit) {
         return ResponseEntity.ok(ApiResponse.ok(bagDiscoveryService.storeBags(storeId, limit)));
+    }
+
+    private UUID extractUserId(Jwt jwt) {
+        return jwt == null ? null : UUID.fromString(jwt.getClaimAsString("user_id"));
     }
 }
