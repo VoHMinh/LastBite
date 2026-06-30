@@ -212,22 +212,23 @@ Nen gom GMV, gross captured, refunds, platform fee, merchant payable, settlement
 
 #### 5.8 BI Event Tracking For True Funnel
 
-Neu FE Analytics hien funnel nhu `Xem bag -> Them gio -> Dat hang -> Thanh toan -> Hoan tat`, BE hien chua thay event tracking table/API cho impressions/click/add-to-cart. Order/payment chi tinh duoc tu checkout tro di.
+Neu FE Analytics hien funnel cho LastBite/Too Good To Go style thi khong nen co buoc gio hang. Funnel dung nen la `Xem store/bag -> Dat tui -> Thanh toan -> Pickup/Hoan tat`. Backend co `store_engagement_events` va `/api/v1/analytics/engagement-events` de track view/click, con order/payment tinh duoc tu checkout tro di.
 
-Can them:
+Con can them cho admin/global funnel va event batch neu muon tracking rong hon:
 
 ```http
-POST /api/v1/events/batch
+POST /api/v1/analytics/events/batch
 GET /api/v1/admin/analytics/funnel?from=&to=
 ```
 
 Event types de can nhac:
 
-- `HOME_VIEW`, `BAG_IMPRESSION`, `BAG_DETAIL_VIEW`
+- Da co: `STORE_VIEW`, `STORE_CARD_CLICK`, `BAG_VIEW`, `BAG_CARD_CLICK`
+- Co the them: `APP_OPEN`, `HOME_VIEW`, `BAG_IMPRESSION`, `SEARCH_SUBMITTED`
 - `CHECKOUT_STARTED`, `PAYMENT_LINK_CREATED`, `PAYMENT_PAID`
 - `ORDER_COMPLETED`, `REFUND_REQUESTED`
 
-Khong co event tracking thi funnel chi la approximation, de BI dashboard se bi sai ban chat.
+Neu thieu event cho tung buoc thi funnel buoc do chi la approximation, de BI dashboard se bi sai ban chat.
 
 #### 5.9 Export / Report Jobs
 

@@ -1,5 +1,6 @@
 package com.LastBite.modules.order.repository;
 
+import com.LastBite.modules.analytics.repository.OrderAnalyticsProjection;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.enums.OrderRefundStatus;
 import com.LastBite.modules.order.enums.OrderStatus;
@@ -147,6 +148,24 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     long countByUser_IdAndPaidAtIsNotNull(UUID userId);
 
     long countByUser_IdAndStatus(UUID userId, OrderStatus status);
+
+    @Query(value = """
+        SELECT
+            COUNT(*) FILTER (WHERE created_at >= :from AND created_at < :to) AS "totalOrders",
+            COUNT(*) FILTER (WHERE paid_at >= :from AND paid_at < :to) AS "paidOrders",
+            COALESCE(SUM(quantity) FILTER (WHERE paid_at >= :from AND paid_at < :to), 0) AS "bagsSold",
+            COALESCE(SUM(final_amount) FILTER (WHERE paid_at >= :from AND paid_at < :to), 0) AS "grossRevenue"
+        FROM orders
+        WHERE store_id = :storeId
+          AND (
+              (created_at >= :from AND created_at < :to)
+              OR (paid_at >= :from AND paid_at < :to)
+          )
+    """, nativeQuery = true)
+    OrderAnalyticsProjection summarizeStoreOrders(@Param("storeId") UUID storeId,
+                                                  @Param("from") Instant from,
+                                                  @Param("to") Instant to);
+
     @Query("""
         SELECT o.bag.category FROM Order o
         WHERE o.user.id = :userId

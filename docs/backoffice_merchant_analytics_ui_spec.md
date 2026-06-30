@@ -32,7 +32,7 @@ Role hiện có trong backend: `CUSTOMER`, `MERCHANT_OWNER`, `MANAGER`, `STAFF`,
 
 ## 2. Trạng Thái Backend Hiện Có
 
-Backend hiện đã có phần lớn data và API cho Merchant Portal và Admin Console. Riêng Analytics/BI Dashboard hiện có dữ liệu gốc trong DB, nhưng **chưa có module analytics aggregate riêng**. Khi làm UI analytics, có 2 hướng:
+Backend hiện đã có phần lớn data và API cho Merchant Portal và Admin Console. Riêng merchant store engagement analytics đã có event table/API cho store/bag view và card click; admin/global BI aggregate/export vẫn nên bổ sung riêng. Khi làm UI analytics, có 2 hướng:
 
 1. MVP: frontend/admin dùng API hiện có để list dữ liệu và tính đơn giản ở client.
 2. Tốt hơn: thêm endpoint aggregate riêng như `/api/v1/admin/analytics/overview`, `/sales`, `/orders`, `/merchants`, `/refunds`, `/export`.
@@ -1059,7 +1059,7 @@ App open
 -> Rating submitted
 ```
 
-Backend hiện có dữ liệu từ `order created` trở đi. Các bước app open/home viewed/bag viewed cần event tracking riêng ở FE/backend analytics.
+Backend hiện có dữ liệu từ `order created` trở đi và đã có `store_engagement_events` cho store/bag view, store/bag card click. Các bước rộng hơn như app open, home viewed, search keyword vẫn cần event tracking bổ sung nếu muốn funnel đầy đủ toàn app.
 
 Metrics có thể tính hiện tại:
 
@@ -1127,7 +1127,7 @@ Metric:
 - unsold quantity.
 - sold out rate.
 - time-to-sell-out: cần event/history chi tiết hơn nếu muốn chính xác.
-- conversion view-to-order: cần tracking bag view.
+- conversion view-to-order: có thể dùng `store_engagement_events` cho bag view/card click kết hợp order/payment.
 
 ### 6.7 Geography Analytics
 
@@ -1189,10 +1189,10 @@ Backend hiện chưa có export endpoint riêng.
 | Support Tickets | Chưa có table/API |
 | Content Management | Chưa có table/API riêng cho banner, FAQ, policy, notification template |
 | Admin Users & Roles nâng cao | Backend có role cơ bản, chưa có permission matrix như support/finance/analyst |
-| Analytics aggregate API | Chưa có endpoint aggregate/export riêng |
+| Analytics aggregate API | Đã có merchant store engagement aggregate; admin/global aggregate/export vẫn cần bổ sung |
 | Admin all-orders/payment/customer search | Dữ liệu có trong DB, nhưng chưa thấy endpoint admin riêng đầy đủ |
 | Bag moderation cho admin | Dữ liệu có, price tier API có, nhưng chưa có all-bag moderation endpoint |
-| FE event tracking | Chưa có event table cho app open, home viewed, bag viewed, search |
+| FE event tracking | Đã có event table/API cho store/bag view và card click; app open, home viewed, search keyword vẫn cần bổ sung |
 
 ## 8. Tóm Gọn Để Đi Làm UI
 
