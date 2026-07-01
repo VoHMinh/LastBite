@@ -1,6 +1,6 @@
 spring:
   config:
-    import: optional:file:/app/.env[.properties]
+    import: optional:file:.env[.properties]
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
@@ -91,7 +91,7 @@ app:
       max-video-size-mb: ${AWS_S3_MAX_VIDEO_SIZE_MB:50}
       public-base-url: ${AWS_S3_PUBLIC_BASE_URL:https://lastbite.s3.amazonaws.com}
   fcm:
-    enabled: ${APP_FCM_ENABLED:true}
+    enabled: ${APP_FCM_ENABLED:false}
     credentials-path: ${APP_FCM_CREDENTIALS_PATH:}
     credentials-base64: ${APP_FCM_CREDENTIALS_BASE64:}
   payments:
