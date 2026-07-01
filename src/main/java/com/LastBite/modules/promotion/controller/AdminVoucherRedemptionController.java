@@ -23,6 +23,7 @@ public class AdminVoucherRedemptionController {
     private final VoucherCampaignService campaignService;
 
     @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listAdminVoucherRedemptions")
     public ResponseEntity<ApiResponse<PageResponse<VoucherRedemptionResponse>>> list(
             @RequestParam(required = false) UUID campaignId,
             @RequestParam(required = false) VoucherRedemptionStatus status,

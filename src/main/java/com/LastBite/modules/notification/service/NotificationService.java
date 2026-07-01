@@ -586,7 +586,10 @@ public class NotificationService implements NotificationServicePort {
     private void createForMerchantStore(Store store, NotificationType type, String title, String body,
                                         String deepLink, NotificationReferenceType referenceType, UUID referenceId,
                                         Map<String, String> payload, String dedupePrefix) {
-        merchantRecipients(store).forEach(user -> createForUser(
+        log.info("[PushDebug] createForMerchantStore called. storeId={}, storeName={}, type={}", store.getId(), store.getName(), type);
+        List<User> recipients = merchantRecipients(store);
+        log.info("[PushDebug] merchantRecipients returned {} user(s) for storeId={}", recipients.size(), store.getId());
+        recipients.forEach(user -> createForUser(
                 user.getId(),
                 type,
                 NotificationCategory.MERCHANT,
@@ -621,19 +624,27 @@ public class NotificationService implements NotificationServicePort {
     }
 
     private List<User> merchantRecipients(Store store) {
+        log.info("[PushDebug] merchantRecipients start. storeId={}, businessProfile={}", store.getId(), store.getBusinessProfile());
         Map<UUID, User> recipients = new LinkedHashMap<>();
         if (store.getBusinessProfile() != null && store.getBusinessProfile().getOwner() != null) {
             User owner = store.getBusinessProfile().getOwner();
+            log.info("[PushDebug] Owner found: userId={}, status={}", owner.getId(), owner.getStatus());
             if (owner.getStatus() == UserStatus.ACTIVE) {
                 recipients.put(owner.getId(), owner);
             }
+        } else {
+            log.warn("[PushDebug] businessProfile or owner is null! storeId={}", store.getId());
         }
-        merchantStoreMemberRepository.findAllByStoreIdOrderByCreatedAtAsc(store.getId()).stream()
+        var members = merchantStoreMemberRepository.findAllByStoreIdOrderByCreatedAtAsc(store.getId());
+        log.info("[PushDebug] Found {} store members for storeId={}", members.size(), store.getId());
+        members.stream()
                 .filter(member -> member.getStatus() == StoreMemberStatus.ACTIVE)
                 .filter(member -> member.getRole() != null && MERCHANT_PUSH_ROLES.contains(member.getRole().getCode()))
+                .peek(member -> log.info("[PushDebug] Member passes filter: userId={}, role={}", member.getUser().getId(), member.getRole()))
                 .map(member -> member.getUser())
                 .filter(user -> user.getStatus() == UserStatus.ACTIVE)
                 .forEach(user -> recipients.put(user.getId(), user));
+        log.info("[PushDebug] merchantRecipients returning {} total recipients", recipients.size());
         return new ArrayList<>(recipients.values());
     }
     private String firstPhoto(BagDailyStock stock) {

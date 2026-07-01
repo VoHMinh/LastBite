@@ -30,6 +30,7 @@ public class MerchantOrderController {
     private final MerchantOrderService merchantOrderService;
 
     @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listMerchantOrders")
     public ResponseEntity<ApiResponse<PageResponse<MerchantOrderResponse>>> list(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,
@@ -44,6 +45,7 @@ public class MerchantOrderController {
     }
 
     @GetMapping("/{orderId}")
+    @io.swagger.v3.oas.annotations.Operation(operationId = "getMerchantOrder", summary = "Lấy chi tiết đơn hàng")
     public ResponseEntity<ApiResponse<MerchantOrderResponse>> get(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,
@@ -52,6 +54,7 @@ public class MerchantOrderController {
     }
 
     @PostMapping("/{orderId}/ready")
+    @io.swagger.v3.oas.annotations.Operation(operationId = "markOrderReady", summary = "Đánh dấu đơn hàng đã sẵn sàng")
     public ResponseEntity<ApiResponse<MerchantOrderResponse>> markReady(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,
@@ -61,6 +64,7 @@ public class MerchantOrderController {
     }
 
     @PostMapping("/{orderId}/cancel")
+    @io.swagger.v3.oas.annotations.Operation(operationId = "cancelMerchantOrder", summary = "Hủy đơn hàng")
     public ResponseEntity<ApiResponse<MerchantOrderResponse>> cancel(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,
@@ -71,6 +75,7 @@ public class MerchantOrderController {
     }
 
     @GetMapping("/{orderId}/timeline")
+    @io.swagger.v3.oas.annotations.Operation(operationId = "getMerchantOrderTimeline", summary = "Lấy timeline trạng thái đơn hàng")
     public ResponseEntity<ApiResponse<List<OrderStatusHistoryResponse>>> timeline(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,

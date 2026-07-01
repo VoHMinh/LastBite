@@ -23,4 +23,5 @@ public class BagPriceTierSummaryResponse {
     private BigDecimal dynamicMinPrice;
     private BigDecimal dynamicMaxPrice;
     private BigDecimal platformFee;
+    private BigDecimal finalPrice;
 }

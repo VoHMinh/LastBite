@@ -68,4 +68,8 @@ public class PublicBagDetailResponse implements Serializable {
     private Double distanceKm;
     private long minutesUntilPickup;
     private boolean pickupActive;
+    private Integer storeTotalBagsListed;
+    private Integer storeTotalBagsFulfilled;
+    private Double storeFulfillmentRate;
+    private Integer storeWarningCount;
 }

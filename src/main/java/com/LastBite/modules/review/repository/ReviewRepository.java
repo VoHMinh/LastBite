@@ -14,6 +14,7 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     boolean existsByOrderId(UUID orderId);
     Optional<Review> findByOrderId(UUID orderId);
     List<Review> findByStoreIdAndVisibleTrueOrderByCreatedAtDesc(UUID storeId);
+    List<Review> findByBagIdAndVisibleTrueOrderByCreatedAtDesc(UUID bagId);
 
     @Query("""
         SELECT COUNT(r), AVG(r.overallRating), AVG(r.collectionRating), AVG(r.qualityRating),

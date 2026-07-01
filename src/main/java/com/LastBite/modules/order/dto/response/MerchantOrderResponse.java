@@ -3,6 +3,7 @@ package com.LastBite.modules.order.dto.response;
 import com.LastBite.modules.order.enums.OrderRefundStatus;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.payment.enums.PaymentStatus;
+import com.LastBite.modules.review.dto.response.ReviewResponse;
 import lombok.Builder;
 import lombok.Data;
 
@@ -40,4 +41,5 @@ public class MerchantOrderResponse {
     private Instant expiredAt;
     private Instant createdAt;
     private Instant updatedAt;
+    private ReviewResponse review;
 }

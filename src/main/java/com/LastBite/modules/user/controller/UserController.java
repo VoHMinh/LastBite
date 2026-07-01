@@ -8,10 +8,14 @@ import com.LastBite.modules.user.dto.request.UpdateDiscoveryPreferenceRequest;
 import com.LastBite.modules.user.dto.request.UpdateProfileRequest;
 import com.LastBite.modules.user.dto.response.AddressResponse;
 import com.LastBite.modules.user.dto.response.DiscoveryPreferenceResponse;
+import com.LastBite.modules.user.dto.response.UserImpactResponse;
 import com.LastBite.modules.user.service.AddressServicePort;
 import com.LastBite.modules.user.service.DiscoveryPreferenceServicePort;
+import com.LastBite.modules.user.service.FavoriteBagServicePort;
 import com.LastBite.modules.user.service.FavoriteStoreServicePort;
+import com.LastBite.modules.user.service.ImpactCalculationService;
 import com.LastBite.modules.user.service.UserServicePort;
+import com.LastBite.modules.bag.dto.response.PublicBagSummaryResponse;
 import com.LastBite.modules.store.dto.response.StoreResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,7 +39,9 @@ public class UserController {
     private final UserServicePort userService;
     private final AddressServicePort addressService;
     private final FavoriteStoreServicePort favoriteStoreService;
+    private final FavoriteBagServicePort favoriteBagService;
     private final DiscoveryPreferenceServicePort discoveryPreferenceService;
+    private final ImpactCalculationService impactCalculationService;
 
     // ── Profile ──
 
@@ -167,6 +173,45 @@ public class UserController {
         UUID userId = extractUserId(jwt);
         favoriteStoreService.delete(userId, storeId);
         return ResponseEntity.ok(ApiResponse.ok());
+    }
+
+    // ── Favorite Bags ──
+
+    @GetMapping("/me/favorite-bags")
+    @Operation(summary = "Danh sach tui yeu thich")
+    public ResponseEntity<ApiResponse<List<PublicBagSummaryResponse>>> getFavoriteBags(
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(favoriteBagService.list(userId)));
+    }
+
+    @PostMapping("/me/favorite-bags/{bagId}")
+    @Operation(summary = "Them tui vao danh sach yeu thich")
+    public ResponseEntity<ApiResponse<PublicBagSummaryResponse>> addFavoriteBag(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bagId) {
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(favoriteBagService.add(userId, bagId),
+                "Da them tui yeu thich"));
+    }
+
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @DeleteMapping("/me/favorite-bags/{bagId}")
+    @Operation(summary = "Xoa tui khoi danh sach yeu thich")
+    public void deleteFavoriteBag(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bagId) {
+        UUID userId = extractUserId(jwt);
+        favoriteBagService.delete(userId, bagId);
+    }
+
+    // ── Impact ──
+
+    @GetMapping("/me/impact")
+    @Operation(summary = "Lay thong ke tac dong moi truong cua nguoi dung")
+    public ResponseEntity<ApiResponse<UserImpactResponse>> getImpact(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = extractUserId(jwt);
+        return ResponseEntity.ok(ApiResponse.ok(impactCalculationService.calculate(userId)));
     }
 
     private UUID extractUserId(Jwt jwt) {

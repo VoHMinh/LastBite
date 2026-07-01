@@ -1,6 +1,5 @@
 package com.LastBite.modules.review.entity;
 
-import com.LastBite.modules.store.entity.Store;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,11 +19,6 @@ public class StoreRatingSummary {
     @Id
     @Column(name = "store_id", nullable = false)
     private UUID storeId;
-
-    @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
-    @JoinColumn(name = "store_id")
-    private Store store;
 
     @Column(name = "review_count", nullable = false)
     @Builder.Default

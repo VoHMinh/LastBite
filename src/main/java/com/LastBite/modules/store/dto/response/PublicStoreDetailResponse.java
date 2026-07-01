@@ -43,6 +43,12 @@ public class PublicStoreDetailResponse implements Serializable {
     private Instant createdAt;
     private List<ScheduleResponse> schedules;
 
+    // Reliability / trust score fields (from StoreReliabilityStats)
+    private Integer storeTotalBagsListed;
+    private Integer storeTotalBagsFulfilled;
+    private Double storeFulfillmentRate;
+    private Integer storeWarningCount;
+
     @Data
     @Builder
     @NoArgsConstructor

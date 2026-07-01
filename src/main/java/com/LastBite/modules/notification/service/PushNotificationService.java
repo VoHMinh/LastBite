@@ -44,17 +44,23 @@ public class PushNotificationService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int sendNotification(AppNotification notification) {
+        log.info("[Push] Attempting send. recipientId={}, category={}, title={}, fcmAvailable={}",
+                notification.getRecipient().getId(), notification.getCategory(), notification.getTitle(), isFcmAvailable());
         if (!preferenceService.isPushEnabled(notification.getRecipient().getId(), notification.getCategory())) {
+            log.info("[Push] Skipped: push disabled for user={}, category={}", notification.getRecipient().getId(), notification.getCategory());
             saveSkipped(notification, null, "User disabled push for " + notification.getCategory());
             return 0;
         }
         if (!isFcmAvailable()) {
+            log.warn("[Push] Skipped: FCM is disabled or unavailable");
             saveSkipped(notification, null, "FCM is disabled or unavailable");
             return 0;
         }
 
         List<NotificationDevice> devices = deviceRepository.findByUserIdAndActiveTrue(notification.getRecipient().getId());
+        log.info("[Push] Found {} active device(s) for userId={}", devices.size(), notification.getRecipient().getId());
         if (devices.isEmpty()) {
+            log.info("[Push] Skipped: no active devices");
             saveSkipped(notification, null, "No active notification devices");
             return 0;
         }

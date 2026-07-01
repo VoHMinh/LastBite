@@ -33,6 +33,7 @@ public class NotificationController {
     private final PushNotificationService pushNotificationService;
 
     @GetMapping
+    @Operation(operationId = "listNotifications")
     public ResponseEntity<ApiResponse<PageResponse<NotificationResponse>>> list(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "0") int page,
@@ -41,16 +42,19 @@ public class NotificationController {
     }
 
     @GetMapping("/unread")
+    @Operation(operationId = "getUnreadNotifications", summary = "Lấy danh sách thông báo chưa đọc")
     public ResponseEntity<ApiResponse<List<NotificationResponse>>> unread(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(ApiResponse.ok(inboxService.unread(extractUserId(jwt))));
     }
 
     @GetMapping("/unread-count")
+    @Operation(operationId = "getUnreadNotificationCount", summary = "Lấy số thông báo chưa đọc")
     public ResponseEntity<ApiResponse<Long>> unreadCount(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(ApiResponse.ok(inboxService.unreadCount(extractUserId(jwt))));
     }
 
     @PatchMapping("/{notificationId}/read")
+    @Operation(operationId = "markNotificationRead", summary = "Đánh dấu một thông báo là đã đọc")
     public ResponseEntity<ApiResponse<NotificationResponse>> markRead(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID notificationId) {
@@ -58,11 +62,13 @@ public class NotificationController {
     }
 
     @PatchMapping("/read-all")
+    @Operation(operationId = "markAllNotificationsRead", summary = "Đánh dấu tất cả thông báo là đã đọc")
     public ResponseEntity<ApiResponse<Integer>> markAllRead(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(ApiResponse.ok(inboxService.markAllRead(extractUserId(jwt))));
     }
 
     @DeleteMapping("/{notificationId}")
+    @Operation(operationId = "deleteNotification", summary = "Xóa một thông báo")
     public ResponseEntity<ApiResponse<Void>> delete(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID notificationId) {
@@ -72,6 +78,7 @@ public class NotificationController {
 
     @PostMapping("/admin/broadcast")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(operationId = "broadcastNotification", summary = "Gửi thông báo broadcast tới tất cả người dùng")
     public ResponseEntity<ApiResponse<BroadcastNotificationResponse>> broadcast(
             @Valid @RequestBody BroadcastNotificationRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(notificationService.broadcastToCustomers(request),
@@ -80,6 +87,7 @@ public class NotificationController {
 
     @GetMapping("/admin/stats")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(operationId = "getNotificationStats", summary = "Lấy thống kê thông báo")
     public ResponseEntity<ApiResponse<NotificationStatsResponse>> stats() {
         return ResponseEntity.ok(ApiResponse.ok(NotificationStatsResponse.builder()
                 .activeDeviceTokens(pushNotificationService.countActiveTokens())

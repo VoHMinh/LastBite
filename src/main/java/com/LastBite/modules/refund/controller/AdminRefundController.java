@@ -30,6 +30,7 @@ public class AdminRefundController {
     private final RefundService refundService;
 
     @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listAdminRefunds")
     public ResponseEntity<ApiResponse<PageResponse<RefundResponse>>> list(
             @RequestParam(required = false) RefundStatus status,
             @RequestParam(required = false) RefundReason reason,

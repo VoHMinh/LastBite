@@ -35,12 +35,30 @@ public class FirebaseConfig {
 
         try (InputStream credentials = openCredentials()) {
             GoogleCredentials googleCredentials = GoogleCredentials.fromStream(credentials);
+            
+            // Re-open stream to extract project_id (first stream was consumed by GoogleCredentials)
+            String projectId = extractProjectId();
+            
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(googleCredentials)
+                    .setProjectId(projectId)
                     .build();
             FirebaseApp app = FirebaseApp.initializeApp(options);
             log.info("Firebase initialized for project {}", app.getOptions().getProjectId());
             return app;
+        }
+    }
+    
+    private String extractProjectId() throws IOException {
+        try (InputStream is = openCredentials()) {
+            // Use Jackson (already in Spring Boot) to parse project_id from service account JSON
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(is);
+            com.fasterxml.jackson.databind.JsonNode projectIdNode = root.get("project_id");
+            if (projectIdNode != null && !projectIdNode.isNull()) {
+                return projectIdNode.asText();
+            }
+            throw new IOException("project_id not found in Firebase service account JSON");
         }
     }
 
@@ -55,6 +73,10 @@ public class FirebaseConfig {
             }
             return new FileInputStream(path);
         }
-        throw new IOException("Missing Firebase credentials. Set APP_FCM_CREDENTIALS_BASE64 or APP_FCM_CREDENTIALS_PATH.");
+        String dockerPath = "/app/firebase-credentials.json";
+        if (new java.io.File(dockerPath).exists()) {
+            return new FileInputStream(dockerPath);
+        }
+        throw new IOException("Missing Firebase credentials. Set APP_FCM_CREDENTIALS_BASE64, APP_FCM_CREDENTIALS_PATH, or mount credentials at /app/keys/firebase-credentials.json.");
     }
 }

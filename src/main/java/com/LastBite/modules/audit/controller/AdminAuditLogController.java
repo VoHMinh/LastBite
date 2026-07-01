@@ -23,6 +23,7 @@ public class AdminAuditLogController {
     private final AdminAuditLogService auditLogService;
 
     @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listAuditLogs")
     public ResponseEntity<ApiResponse<PageResponse<AdminAuditLogResponse>>> list(
             @RequestParam(required = false) UUID actorId,
             @RequestParam(required = false) String action,

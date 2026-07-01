@@ -31,6 +31,7 @@ public class MerchantVoucherCampaignController {
     private final VoucherCampaignService campaignService;
 
     @GetMapping("/voucher-campaigns")
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listVoucherCampaigns")
     public ResponseEntity<ApiResponse<PageResponse<VoucherCampaignResponse>>> list(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,
@@ -98,6 +99,7 @@ public class MerchantVoucherCampaignController {
                 userId(jwt), storeId, campaignId, request), "Da them code vao voucher campaign"));
     }
     @GetMapping("/voucher-redemptions")
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listVoucherRedemptions")
     public ResponseEntity<ApiResponse<PageResponse<VoucherRedemptionResponse>>> redemptions(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,
