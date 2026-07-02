@@ -6,7 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -40,4 +42,13 @@ public interface SurpriseBagRepository extends JpaRepository<SurpriseBag, UUID> 
           )
     """)
     List<SurpriseBag> findActiveBagsMissingStockForDate(LocalDate date);
+
+    @Modifying
+    @Query("""
+        UPDATE SurpriseBag b
+        SET b.status = com.LastBite.modules.bag.enums.BagStatus.ARCHIVED
+        WHERE b.store.businessProfile.owner.id = :ownerId
+          AND b.status <> com.LastBite.modules.bag.enums.BagStatus.ARCHIVED
+    """)
+    int archiveAllByOwnerId(@Param("ownerId") UUID ownerId);
 }

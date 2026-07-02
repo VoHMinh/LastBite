@@ -23,7 +23,7 @@ ON CONFLICT (id) DO UPDATE SET
     updated_at = NOW();
 
 INSERT INTO user_roles (user_id, role_id)
-SELECT user_id, role_id
+SELECT seed.user_id, r.id
 FROM (
     VALUES
         ('11111111-1111-1111-1111-111111111111'::uuid, 'MERCHANT_OWNER'),

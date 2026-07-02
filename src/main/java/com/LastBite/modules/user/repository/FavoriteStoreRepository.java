@@ -21,5 +21,7 @@ public interface FavoriteStoreRepository extends JpaRepository<FavoriteStore, UU
 
     boolean existsByUserIdAndStoreId(UUID userId, UUID storeId);
 
+    long deleteByUserId(UUID userId);
+
     long deleteByUserIdAndStoreId(UUID userId, UUID storeId);
 }

@@ -11,4 +11,6 @@ public interface UserDiscoveryPreferenceRepository extends JpaRepository<UserDis
 
     @EntityGraph(attributePaths = {"preferredCollectionTimes"})
     Optional<UserDiscoveryPreference> findByUserId(UUID userId);
+
+    long deleteByUserId(UUID userId);
 }

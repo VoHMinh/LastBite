@@ -149,6 +149,16 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     long countByUser_IdAndStatus(UUID userId, OrderStatus status);
 
+    long countByUser_IdAndStatusIn(UUID userId, List<OrderStatus> statuses);
+
+    @Query("""
+        SELECT COUNT(o) FROM Order o
+        WHERE o.store.businessProfile.owner.id = :ownerId
+          AND o.status IN :statuses
+    """)
+    long countByOwnerIdAndStatusIn(@Param("ownerId") UUID ownerId,
+                                   @Param("statuses") List<OrderStatus> statuses);
+
     @Query(value = """
         SELECT
             COUNT(*) FILTER (WHERE created_at >= :from AND created_at < :to) AS "totalOrders",

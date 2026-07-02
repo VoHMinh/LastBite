@@ -9,6 +9,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
+import java.time.Instant;
+
 /**
  * Dịch vụ gửi email bằng Spring Boot Starter Mail (Gmail SMTP).
  * <p>
@@ -59,6 +61,44 @@ public class EmailService {
             log.info("Đã gửi email link xác minh tới {}", toEmail);
         } catch (Exception e) {
             log.error("Gửi email link xác minh tới {} thất bại: {}", toEmail, e.getMessage(), e);
+        }
+    }
+
+    @Async
+    public void sendAccountDeletionVerificationEmail(String toEmail, String fullName, String verificationLink) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("LastBite - Confirm account deletion request");
+            helper.setText(buildAccountDeletionVerificationHtml(fullName, verificationLink), true);
+            helper.setFrom("The Last Bite <thelastbite915@gmail.com>");
+            mailSender.send(message);
+            log.info("Sent account deletion verification email to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Account deletion verification email to {} failed: {}", toEmail, e.getMessage(), e);
+        }
+    }
+
+    @Async
+    public void sendAccountDeletionScheduledEmail(
+            String toEmail,
+            String fullName,
+            String cancellationLink,
+            Instant scheduledDeletionAt) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(toEmail);
+            helper.setSubject("LastBite - Account deletion scheduled");
+            helper.setText(buildAccountDeletionScheduledHtml(fullName, cancellationLink, scheduledDeletionAt), true);
+            helper.setFrom("The Last Bite <thelastbite915@gmail.com>");
+            mailSender.send(message);
+            log.info("Sent account deletion scheduled email to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Account deletion scheduled email to {} failed: {}", toEmail, e.getMessage(), e);
         }
     }
 
@@ -151,6 +191,91 @@ public class EmailService {
             </body>
             </html>
             """.formatted(escape(fullName), escape(verificationLink));
+    }
+
+    private String buildAccountDeletionVerificationHtml(String fullName, String verificationLink) {
+        return """
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#f4f4f7;font-family:'Segoe UI',Roboto,Arial,sans-serif">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:40px 0">
+                <tr><td align="center">
+                  <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+                    <tr>
+                      <td style="background:#111827;padding:32px 40px;text-align:center">
+                        <h1 style="margin:0;color:#fff;font-size:28px;font-weight:700">LastBite</h1>
+                        <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px">Account deletion request</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:32px 40px">
+                        <p style="margin:0 0 16px;color:#333;font-size:16px">Xin chao <strong>%s</strong>,</p>
+                        <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.6">
+                          Chung toi nhan duoc yeu cau xoa tai khoan LastBite cua ban. Neu dung la ban yeu cau, vui long bam nut ben duoi de xac minh.
+                        </p>
+                        <div style="text-align:center;margin:0 0 24px">
+                          <a href="%s" style="display:inline-block;background:#111827;color:#fff;text-decoration:none;border-radius:8px;padding:14px 28px;font-size:15px;font-weight:700">
+                            Xac minh yeu cau xoa tai khoan
+                          </a>
+                        </div>
+                        <p style="margin:0;color:#888;font-size:13px;text-align:center">
+                          Link co hieu luc trong <strong>24 gio</strong>. Neu ban khong yeu cau, vui long bo qua email nay.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(escape(fullName), escape(verificationLink));
+    }
+
+    private String buildAccountDeletionScheduledHtml(
+            String fullName,
+            String cancellationLink,
+            Instant scheduledDeletionAt) {
+        return """
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#f4f4f7;font-family:'Segoe UI',Roboto,Arial,sans-serif">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:40px 0">
+                <tr><td align="center">
+                  <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+                    <tr>
+                      <td style="background:#111827;padding:32px 40px;text-align:center">
+                        <h1 style="margin:0;color:#fff;font-size:28px;font-weight:700">LastBite</h1>
+                        <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px">Account deletion scheduled</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:32px 40px">
+                        <p style="margin:0 0 16px;color:#333;font-size:16px">Xin chao <strong>%s</strong>,</p>
+                        <p style="margin:0 0 24px;color:#555;font-size:15px;line-height:1.6">
+                          Tai khoan LastBite cua ban da duoc len lich xoa vao <strong>%s</strong>.
+                          Neu ban doi y, hay bam nut ben duoi truoc thoi diem nay de huy yeu cau.
+                        </p>
+                        <div style="text-align:center;margin:0 0 24px">
+                          <a href="%s" style="display:inline-block;background:#111827;color:#fff;text-decoration:none;border-radius:8px;padding:14px 28px;font-size:15px;font-weight:700">
+                            Huy yeu cau xoa tai khoan
+                          </a>
+                        </div>
+                        <p style="margin:0;color:#888;font-size:13px;text-align:center">
+                          Neu ban khong huy, tai khoan se duoc an danh hoa sau thoi gian cho.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(
+                escape(fullName),
+                escape(scheduledDeletionAt == null ? "" : scheduledDeletionAt.toString()),
+                escape(cancellationLink));
     }
 
     private String escape(String value) {

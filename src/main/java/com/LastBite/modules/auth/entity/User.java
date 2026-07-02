@@ -77,6 +77,18 @@ public class User extends BaseEntity {
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
+    @Column(name = "deletion_requested_at")
+    private Instant deletionRequestedAt;
+
+    @Column(name = "deletion_scheduled_at")
+    private Instant deletionScheduledAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "anonymized_at")
+    private Instant anonymizedAt;
+
     public boolean hasRole(UserRole role) {
         return roles.stream().anyMatch(item -> item.getCode() == role);
     }

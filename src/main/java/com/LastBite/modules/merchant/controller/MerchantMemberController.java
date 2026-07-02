@@ -47,6 +47,16 @@ public class MerchantMemberController {
         return ResponseEntity.ok(ApiResponse.ok(memberService.suspend(userId(jwt), storeId, memberId)));
     }
 
+    @DeleteMapping("/{memberId}")
+    public ResponseEntity<ApiResponse<StoreMemberResponse>> terminate(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID storeId,
+            @PathVariable UUID memberId) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                memberService.terminate(userId(jwt), storeId, memberId),
+                "Store member access terminated"));
+    }
+
     private UUID userId(Jwt jwt) {
         return UUID.fromString(jwt.getClaimAsString("user_id"));
     }
