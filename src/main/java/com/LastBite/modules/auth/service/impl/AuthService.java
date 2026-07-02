@@ -301,7 +301,7 @@ public class AuthService implements AuthServicePort {
         if (user.getStatus() == UserStatus.BANNED) {
             throw new ApiException(ErrorCode.ACCOUNT_LOCKED);
         }
-        if (user.getStatus() == UserStatus.INACTIVE) {
+        if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ApiException(ErrorCode.ACCOUNT_DISABLED);
         }
 

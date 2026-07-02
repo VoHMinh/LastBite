@@ -21,6 +21,16 @@ public interface RefundRequestRepository extends JpaRepository<RefundRequest, UU
     Optional<RefundRequest> findFirstByOrderId(UUID orderId);
     boolean existsByOrderId(UUID orderId);
 
+    long countByRequestedBy_IdAndStatusIn(UUID userId, Collection<RefundStatus> statuses);
+
+    @Query("""
+        SELECT COUNT(r) FROM RefundRequest r
+        WHERE r.order.store.businessProfile.owner.id = :ownerId
+          AND r.status IN :statuses
+    """)
+    long countByOwnerIdAndStatusIn(@Param("ownerId") UUID ownerId,
+                                   @Param("statuses") Collection<RefundStatus> statuses);
+
     @EntityGraph(attributePaths = {"order", "order.user", "payment", "requestedBy", "reviewedBy"})
     @Query("""
         SELECT r FROM RefundRequest r

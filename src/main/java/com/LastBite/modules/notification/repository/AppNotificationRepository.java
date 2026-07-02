@@ -27,6 +27,8 @@ public interface AppNotificationRepository extends JpaRepository<AppNotification
 
     long countByRecipientIdAndReadFalse(UUID recipientId);
 
+    long deleteByRecipientId(UUID recipientId);
+
     Optional<AppNotification> findByDedupeKey(String dedupeKey);
 
     @Modifying

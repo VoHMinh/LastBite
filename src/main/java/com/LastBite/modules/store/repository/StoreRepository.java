@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -23,6 +24,8 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
 
     @EntityGraph(value = "Store.withSchedules")
     List<Store> findAllByBusinessProfileOwnerIdOrderByCreatedAtAsc(UUID ownerId);
+
+    List<Store> findAllByBusinessProfileOwnerId(UUID ownerId);
 
     @EntityGraph(value = "Store.withSchedules")
     Optional<Store> findByIdAndBusinessProfileOwnerId(UUID id, UUID ownerId);
@@ -65,4 +68,13 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
                              String city,
                              String district,
                              Pageable pageable);
+
+    @Modifying
+    @Query("""
+        UPDATE Store s
+        SET s.status = com.LastBite.modules.store.enums.StoreStatus.CLOSED
+        WHERE s.businessProfile.owner.id = :ownerId
+          AND s.status <> com.LastBite.modules.store.enums.StoreStatus.CLOSED
+    """)
+    int closeAllByOwnerId(@Param("ownerId") UUID ownerId);
 }

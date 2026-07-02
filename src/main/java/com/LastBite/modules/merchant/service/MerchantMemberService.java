@@ -106,6 +106,21 @@ public class MerchantMemberService {
         return toResponse(memberRepository.save(member), null);
     }
 
+    @Transactional
+    public StoreMemberResponse terminate(UUID actorId, UUID storeId, UUID memberId) {
+        Store store = getStore(storeId);
+        UserRole actorRole = authorizeMemberManagement(actorId, store);
+        MerchantStoreMember member = getMember(storeId, memberId);
+        if (actorRole == UserRole.MANAGER && member.getRole().getCode() != UserRole.STAFF) {
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+        member.setStatus(StoreMemberStatus.TERMINATED);
+        member.getUser().setStatus(UserStatus.INACTIVE);
+        userRepository.save(member.getUser());
+        refreshTokenService.revokeAllByUserId(member.getUser().getId());
+        return toResponse(memberRepository.save(member), null);
+    }
+
     private UserRole authorizeMemberManagement(UUID actorId, Store store) {
         if (store.getBusinessProfile().getOwner().getId().equals(actorId)) {
             return UserRole.MERCHANT_OWNER;

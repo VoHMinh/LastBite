@@ -143,6 +143,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
     List<Order> findOrdersPastPickupWindow(@Param("statuses") List<OrderStatus> statuses,
                                            @Param("today") LocalDate today,
                                            @Param("cutoffTime") LocalTime cutoffTime);
+
     @Query("""
         SELECT COUNT(o) FROM Order o
         WHERE o.store.id = :storeId
@@ -154,6 +155,16 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
     long countByUser_IdAndPaidAtIsNotNull(UUID userId);
 
     long countByUser_IdAndStatus(UUID userId, OrderStatus status);
+
+    long countByUser_IdAndStatusIn(UUID userId, List<OrderStatus> statuses);
+
+    @Query("""
+        SELECT COUNT(o) FROM Order o
+        WHERE o.store.businessProfile.owner.id = :ownerId
+          AND o.status IN :statuses
+    """)
+    long countByOwnerIdAndStatusIn(@Param("ownerId") UUID ownerId,
+                                   @Param("statuses") List<OrderStatus> statuses);
 
     @Query(value = """
         SELECT
