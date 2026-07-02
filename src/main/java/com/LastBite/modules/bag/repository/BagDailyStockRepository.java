@@ -105,7 +105,11 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
                     cos(radians(CAST(:lat AS double precision))) * cos(radians(st.lat)) *
                     cos(radians(st.lng) - radians(CAST(:lng AS double precision))) +
                     sin(radians(CAST(:lat AS double precision))) * sin(radians(st.lat))
-                )))) AS "distanceKm"
+                )))) AS "distanceKm",
+                rs.total_bags_listed AS "storeTotalBagsListed",
+                rs.total_bags_fulfilled AS "storeTotalBagsFulfilled",
+                rs.fulfillment_rate AS "storeFulfillmentRate",
+                rs.warning_count AS "storeWarningCount"
             FROM bag_daily_stocks s
             JOIN surprise_bags b ON b.id = s.bag_id
             JOIN stores st ON st.id = s.store_id
@@ -188,7 +192,11 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             s.sold AS sold,
             (s.quantity - s.reserved - s.sold) AS available,
             s.status AS "stockStatus",
-            CAST(NULL AS double precision) AS "distanceKm"
+            CAST(NULL AS double precision) AS "distanceKm",
+            rs.total_bags_listed AS "storeTotalBagsListed",
+            rs.total_bags_fulfilled AS "storeTotalBagsFulfilled",
+            rs.fulfillment_rate AS "storeFulfillmentRate",
+            rs.warning_count AS "storeWarningCount"
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id
@@ -261,7 +269,11 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             s.sold AS sold,
             (s.quantity - s.reserved - s.sold) AS available,
             s.status AS "stockStatus",
-            CAST(NULL AS double precision) AS "distanceKm"
+            CAST(NULL AS double precision) AS "distanceKm",
+            rs.total_bags_listed AS "storeTotalBagsListed",
+            rs.total_bags_fulfilled AS "storeTotalBagsFulfilled",
+            rs.fulfillment_rate AS "storeFulfillmentRate",
+            rs.warning_count AS "storeWarningCount"
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id
@@ -322,7 +334,11 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             s.sold AS sold,
             (s.quantity - s.reserved - s.sold) AS available,
             s.status AS "stockStatus",
-            CAST(NULL AS double precision) AS "distanceKm"
+            CAST(NULL AS double precision) AS "distanceKm",
+            rs.total_bags_listed AS "storeTotalBagsListed",
+            rs.total_bags_fulfilled AS "storeTotalBagsFulfilled",
+            rs.fulfillment_rate AS "storeFulfillmentRate",
+            rs.warning_count AS "storeWarningCount"
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id

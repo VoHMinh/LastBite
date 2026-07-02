@@ -36,6 +36,7 @@ public class AdminSettlementController {
     }
 
     @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listAdminSettlements")
     public ResponseEntity<ApiResponse<Page<SettlementResponse>>> list(
             @RequestParam(required = false) MerchantSettlementStatus status,
             @RequestParam(defaultValue = "0") int page,

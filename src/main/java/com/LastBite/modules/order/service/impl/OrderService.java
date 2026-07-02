@@ -35,6 +35,8 @@ import com.LastBite.modules.promotion.service.VoucherApplicationResult;
 import com.LastBite.modules.promotion.service.VoucherApplicationService;
 import com.LastBite.modules.refund.enums.RefundReason;
 import com.LastBite.modules.refund.service.RefundService;
+import com.LastBite.modules.review.dto.response.ReviewResponse;
+import com.LastBite.modules.review.service.ReviewService;
 import com.LastBite.modules.store.enums.StoreStatus;
 import com.LastBite.modules.store.enums.VerificationStatus;
 import com.LastBite.modules.store.service.StoreCalendarService;
@@ -75,6 +77,7 @@ public class OrderService implements OrderServicePort {
     private final OrderStatusHistoryService statusHistoryService;
     private final SensitiveDataCipher sensitiveDataCipher;
     private final Clock clock;
+    private final ReviewService reviewService;
 
     @Override
     @Transactional
@@ -323,6 +326,7 @@ public class OrderService implements OrderServicePort {
     }
 
     private OrderResponse toResponse(Order order, Payment payment, String pickupQrToken) {
+        ReviewResponse review = reviewService.getByOrderId(order.getId());
         VoucherValidationResponse voucher = order.getId() == null ? null : voucherApplicationService.snapshotForOrder(order.getId());
         return OrderResponse.builder()
                 .id(order.getId())
@@ -332,6 +336,8 @@ public class OrderService implements OrderServicePort {
                 .storeName(order.getStore().getName())
                 .bagId(order.getBag().getId())
                 .bagName(order.getBag().getName())
+                .bagImageUrl(order.getBag().getPhotos() != null && order.getBag().getPhotos().length > 0
+                        ? order.getBag().getPhotos()[0] : null)
                 .dailyStockId(order.getDailyStock().getId())
                 .quantity(order.getQuantity())
                 .unitPrice(order.getUnitPrice())
@@ -369,6 +375,8 @@ public class OrderService implements OrderServicePort {
                 .paymentQrCode(payment == null ? null : payment.getQrCode())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
+                .review(review)
+                .alreadyLeaveReview(review != null)
                 .build();
     }
 }

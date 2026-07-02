@@ -24,6 +24,7 @@ import com.LastBite.modules.order.dto.response.MerchantOrderResponse;
 import com.LastBite.modules.order.entity.Order;
 import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.repository.OrderRepository;
+import com.LastBite.modules.order.specification.OrderSpecifications;
 import com.LastBite.modules.payment.entity.Payment;
 import com.LastBite.modules.payment.service.PaymentService;
 import com.LastBite.modules.promotion.service.VoucherApplicationService;
@@ -33,6 +34,7 @@ import com.LastBite.modules.pickup.enums.PickupEventType;
 import com.LastBite.modules.pickup.repository.PickupEventRepository;
 import com.LastBite.modules.refund.enums.RefundReason;
 import com.LastBite.modules.refund.service.RefundService;
+import com.LastBite.modules.review.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Pageable;
@@ -64,14 +66,15 @@ public class MerchantOrderService {
     private final OrderStatusHistoryService statusHistoryService;
     private final NotificationServicePort notificationService;
     private final AdminAuditLogService auditLogService;
+    private final ReviewService reviewService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
     public PageResponse<MerchantOrderResponse> list(UUID actorId, UUID storeId, LocalDate date,
                                                     OrderStatus status, Pageable pageable) {
         storeAccessService.require(actorId, storeId, ORDER_ROLES);
-        var page = orderRepository.searchStoreOrders(storeId, date, status, pageable)
-                .map(this::toResponse);
+        var spec = OrderSpecifications.storeOrders(storeId, date, status);
+        var page = orderRepository.findAll(spec, pageable).map(this::toResponse);
         return new PageResponse<>(page.getContent(), page.getNumber(), page.getSize(),
                 page.getTotalElements(), page.getTotalPages());
     }
@@ -224,6 +227,7 @@ public class MerchantOrderService {
                 .expiredAt(order.getExpiredAt())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
+                .review(reviewService.getByOrderId(order.getId()))
                 .build();
     }
 

@@ -2,10 +2,8 @@ package com.LastBite.modules.bag.controller;
 
 import com.LastBite.common.response.*;
 import com.LastBite.modules.bag.dto.request.CreateSurpriseBagRequest;
-import com.LastBite.modules.bag.dto.response.BagPriceTierSummaryResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
 import com.LastBite.modules.bag.service.SurpriseBagServicePort;
-import com.LastBite.modules.store.enums.StoreCategory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,7 +15,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -37,6 +34,7 @@ public class StoreBagController {
     }
 
     @GetMapping
+    @Operation(operationId = "listStoreBags")
     public ResponseEntity<ApiResponse<PageResponse<SurpriseBagResponse>>> list(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,
@@ -46,24 +44,7 @@ public class StoreBagController {
         return ResponseEntity.ok(ApiResponse.ok(bagService.list(userId(jwt), storeId, pageable)));
     }
 
-    @GetMapping("/price-tiers/categories")
-    @Operation(summary = "Danh sách danh mục đang có gói giá",
-            description = "Bước 1: Lấy danh sách category mà Admin đã cấu hình gói giá. "
-                    + "Cửa hàng chọn 1 category trước, rồi gọi /price-tiers?category=X để xem giá.")
-    public ResponseEntity<ApiResponse<List<StoreCategory>>> priceTierCategories() {
-        return ResponseEntity.ok(ApiResponse.ok(bagService.listAvailableCategories()));
-    }
-
-    @GetMapping("/price-tiers")
-    @Operation(summary = "Danh sách gói giá theo danh mục",
-            description = "Bước 2: Sau khi chọn category, gọi API này để lấy các size túi và giá tương ứng.")
-    public ResponseEntity<ApiResponse<List<BagPriceTierSummaryResponse>>> priceTiers(
-            @RequestParam StoreCategory category) {
-        return ResponseEntity.ok(ApiResponse.ok(bagService.listActivePriceTiers(category)));
-    }
-
     private UUID userId(Jwt jwt) {
         return UUID.fromString(jwt.getClaimAsString("user_id"));
     }
 }
-

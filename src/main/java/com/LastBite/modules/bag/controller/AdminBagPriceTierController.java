@@ -29,7 +29,7 @@ public class AdminBagPriceTierController {
     private final AdminBagPriceTierServicePort tierService;
 
     @GetMapping
-    @Operation(summary = "Danh sách gói giá")
+    @Operation(operationId = "listBagPriceTiersAdmin", summary = "Danh sách gói giá")
     public ResponseEntity<ApiResponse<PageResponse<BagPriceTierResponse>>> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -39,20 +39,20 @@ public class AdminBagPriceTierController {
     }
 
     @GetMapping("/{tierId}")
-    @Operation(summary = "Chi tiết gói giá")
+    @Operation(operationId = "getBagPriceTierDetailsAdmin", summary = "Chi tiết gói giá")
     public ResponseEntity<ApiResponse<BagPriceTierResponse>> get(@PathVariable UUID tierId) {
         return ResponseEntity.ok(ApiResponse.ok(tierService.get(tierId)));
     }
 
     @PostMapping
-    @Operation(summary = "Tạo gói giá mới")
+    @Operation(operationId = "createBagPriceTierAdmin", summary = "Tạo gói giá mới")
     public ResponseEntity<ApiResponse<BagPriceTierResponse>> create(
             @Valid @RequestBody BagPriceTierRequest request) {
         return ResponseEntity.ok(ApiResponse.ok(tierService.create(request), "Đã tạo gói giá"));
     }
 
     @PatchMapping("/{tierId}")
-    @Operation(summary = "Cập nhật gói giá")
+    @Operation(operationId = "updateBagPriceTierAdmin", summary = "Cập nhật gói giá")
     public ResponseEntity<ApiResponse<BagPriceTierResponse>> update(
             @PathVariable UUID tierId,
             @Valid @RequestBody UpdateBagPriceTierRequest request) {
@@ -60,13 +60,13 @@ public class AdminBagPriceTierController {
     }
 
     @PatchMapping("/{tierId}/activate")
-    @Operation(summary = "Kích hoạt gói giá")
+    @Operation(operationId = "activateBagPriceTierAdmin", summary = "Kích hoạt gói giá")
     public ResponseEntity<ApiResponse<BagPriceTierResponse>> activate(@PathVariable UUID tierId) {
         return ResponseEntity.ok(ApiResponse.ok(tierService.activate(tierId), "Đã kích hoạt gói giá"));
     }
 
     @PatchMapping("/{tierId}/deactivate")
-    @Operation(summary = "Tạm tắt gói giá")
+    @Operation(operationId = "deactivateBagPriceTierAdmin", summary = "Tạm tắt gói giá")
     public ResponseEntity<ApiResponse<BagPriceTierResponse>> deactivate(@PathVariable UUID tierId) {
         return ResponseEntity.ok(ApiResponse.ok(tierService.deactivate(tierId), "Đã tạm tắt gói giá"));
     }

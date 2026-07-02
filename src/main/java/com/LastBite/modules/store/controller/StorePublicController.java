@@ -38,7 +38,7 @@ public class StorePublicController {
     private final StoreEngagementAnalyticsService analyticsService;
 
     @GetMapping
-    @Operation(summary = "Tìm kiếm cửa hàng đang hoạt động và đã xác minh")
+    @Operation(operationId = "searchStores", summary = "Tìm kiếm cửa hàng đang hoạt động và đã xác minh")
     public ResponseEntity<ApiResponse<Page<StoreResponse>>> searchStores(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) StoreCategory category,
@@ -61,6 +61,12 @@ public class StorePublicController {
         PublicStoreDetailResponse response = storeQueryService.getStoreBySlug(slug);
         analyticsService.recordStoreViewSafely(response.getId(), extractUserId(jwt), source, request);
         return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @GetMapping("/id/{storeId}")
+    @Operation(summary = "Lấy chi tiết cửa hàng công khai theo ID")
+    public ResponseEntity<ApiResponse<PublicStoreDetailResponse>> getStoreById(@PathVariable UUID storeId) {
+        return ResponseEntity.ok(ApiResponse.ok(storeQueryService.getStoreById(storeId)));
     }
 
     @GetMapping("/{storeId}/bags")

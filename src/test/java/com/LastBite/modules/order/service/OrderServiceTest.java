@@ -27,6 +27,7 @@ import com.LastBite.modules.payment.service.PaymentService;
 import com.LastBite.modules.promotion.service.VoucherApplicationResult;
 import com.LastBite.modules.promotion.service.VoucherApplicationService;
 import com.LastBite.modules.refund.service.RefundService;
+import com.LastBite.modules.review.service.ReviewService;
 import com.LastBite.modules.store.entity.Store;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.enums.StoreStatus;
@@ -66,6 +67,7 @@ class OrderServiceTest {
     private final StoreCalendarService storeCalendarService = mock(StoreCalendarService.class);
     private final StoreReliabilityService reliabilityService = mock(StoreReliabilityService.class);
     private final OrderStatusHistoryService statusHistoryService = mock(OrderStatusHistoryService.class);
+    private final ReviewService reviewService = mock(ReviewService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-05-25T13:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final BagPricingService pricingService = new BagPricingService(clock);
     private final SensitiveDataCipher sensitiveDataCipher = new SensitiveDataCipher("test-encryption-key");
@@ -81,7 +83,7 @@ class OrderServiceTest {
         service = new OrderService(orderRepository, stockRepository, auditLogRepository,
                 userRepository, pricingService, notificationService, paymentService, refundService,
                 voucherApplicationService, storeCalendarService, reliabilityService, statusHistoryService,
-                sensitiveDataCipher, clock);
+                sensitiveDataCipher, clock, reviewService);
         userId = UUID.randomUUID();
         bagId = UUID.randomUUID();
         user = User.builder().email("customer@test.com").fullName("Customer Test").build();

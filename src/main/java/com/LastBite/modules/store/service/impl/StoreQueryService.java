@@ -10,8 +10,10 @@ import com.LastBite.modules.media.service.MediaUrlService;
 import com.LastBite.modules.store.dto.response.PublicStoreDetailResponse;
 import com.LastBite.modules.store.dto.response.StoreResponse;
 import com.LastBite.modules.store.entity.Store;
+import com.LastBite.modules.store.entity.StoreReliabilityStats;
 import com.LastBite.modules.store.enums.StoreCategory;
 import com.LastBite.modules.store.enums.VerificationStatus;
+import com.LastBite.modules.store.repository.StoreReliabilityStatsRepository;
 import com.LastBite.modules.store.repository.StoreRepository;
 import com.LastBite.modules.store.service.StoreQueryServicePort;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class StoreQueryService implements StoreQueryServicePort {
 
     private final StoreRepository storeRepository;
     private final MediaUploadRepository mediaUploadRepository;
+    private final StoreReliabilityStatsRepository statsRepository;
     private final MediaUrlService mediaUrlService;
 
     /**
@@ -65,6 +68,22 @@ public class StoreQueryService implements StoreQueryServicePort {
         return toPublicDetailResponse(store);
     }
 
+    /**
+     * Lấy chi tiết cửa hàng theo ID (cache 15 phút).
+     */
+    @Cacheable(value = "store-by-id", key = "#storeId")
+    public PublicStoreDetailResponse getStoreById(UUID storeId) {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        // Chỉ hiển thị cửa hàng đã xác minh cho public
+        if (store.getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new ApiException(ErrorCode.STORE_NOT_FOUND, "Cửa hàng chưa được xác minh");
+        }
+
+        return toPublicDetailResponse(store);
+    }
+
     private PublicStoreDetailResponse toPublicDetailResponse(Store store) {
         var schedules = store.getSchedules().stream()
                 .map(s -> PublicStoreDetailResponse.ScheduleResponse.builder()
@@ -74,6 +93,8 @@ public class StoreQueryService implements StoreQueryServicePort {
                         .isOpen(s.isOpen())
                         .build())
                 .toList();
+
+        StoreReliabilityStats stats = statsRepository.findById(store.getId()).orElse(null);
 
         return PublicStoreDetailResponse.builder()
                 .id(store.getId())
@@ -96,6 +117,10 @@ public class StoreQueryService implements StoreQueryServicePort {
                 .totalRatings(store.getTotalRatings())
                 .createdAt(store.getCreatedAt())
                 .schedules(schedules)
+                .storeTotalBagsListed(stats != null ? stats.getTotalBagsListed() : null)
+                .storeTotalBagsFulfilled(stats != null ? stats.getTotalBagsFulfilled() : null)
+                .storeFulfillmentRate(stats != null ? stats.getFulfillmentRate() : null)
+                .storeWarningCount(stats != null ? stats.getWarningCount() : null)
                 .build();
     }
 

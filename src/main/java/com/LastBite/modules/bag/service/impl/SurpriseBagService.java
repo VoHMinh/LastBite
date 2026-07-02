@@ -50,6 +50,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -346,6 +347,15 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     @Transactional(readOnly = true)
+    public BagPriceTierSummaryResponse getActivePriceTier(
+            com.LastBite.modules.store.enums.StoreCategory category,
+            com.LastBite.modules.bag.enums.BagSize bagSize) {
+        return priceTierRepository.findByCategoryAndBagSizeAndActiveTrue(category, bagSize)
+                .map(this::toTierSummary)
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
     public List<BagPriceTierSummaryResponse> listActivePriceTiers(
             com.LastBite.modules.store.enums.StoreCategory category) {
         List<BagPriceTier> tiers = category == null
@@ -355,6 +365,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     }
 
     private BagPriceTierSummaryResponse toTierSummary(BagPriceTier tier) {
+        BigDecimal finalPrice = tier.getBaseSalePrice().add(tier.getPlatformFee());
         return BagPriceTierSummaryResponse.builder()
                 .id(tier.getId())
                 .category(tier.getCategory())
@@ -364,6 +375,7 @@ public class SurpriseBagService implements SurpriseBagServicePort {
                 .dynamicMinPrice(tier.getDynamicMinPrice())
                 .dynamicMaxPrice(tier.getDynamicMaxPrice())
                 .platformFee(tier.getPlatformFee())
+                .finalPrice(finalPrice)
                 .build();
     }
 

@@ -34,7 +34,7 @@ public class OrderController {
     private final OrderServicePort orderService;
 
     @PostMapping
-    @Operation(summary = "Reserve today's surprise bag and create payment checkout")
+    @Operation(operationId = "createOrder", summary = "Reserve today's surprise bag and create payment checkout")
     public ResponseEntity<ApiResponse<OrderResponse>> create(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateOrderRequest request) {
@@ -43,7 +43,7 @@ public class OrderController {
     }
 
     @GetMapping("/{orderId}")
-    @Operation(summary = "Get my order detail")
+    @Operation(operationId = "getOrder", summary = "Get my order detail")
     public ResponseEntity<ApiResponse<OrderResponse>> get(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID orderId) {
@@ -51,7 +51,7 @@ public class OrderController {
     }
 
     @GetMapping
-    @Operation(summary = "List my orders")
+    @Operation(operationId = "listOrders")
     public ResponseEntity<ApiResponse<PageResponse<OrderResponse>>> list(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) OrderStatus status,
@@ -67,7 +67,7 @@ public class OrderController {
     }
 
     @GetMapping("/{orderId}/timeline")
-    @Operation(summary = "Get my order status timeline")
+    @Operation(operationId = "getOrderTimeline", summary = "Get my order status timeline")
     public ResponseEntity<ApiResponse<List<OrderStatusHistoryResponse>>> timeline(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID orderId) {
@@ -75,7 +75,7 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/cancel")
-    @Operation(summary = "Cancel my order")
+    @Operation(operationId = "cancelOrder", summary = "Cancel my order")
     public ResponseEntity<ApiResponse<OrderResponse>> cancel(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID orderId) {

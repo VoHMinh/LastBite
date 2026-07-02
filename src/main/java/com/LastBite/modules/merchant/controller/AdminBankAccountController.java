@@ -27,6 +27,7 @@ public class AdminBankAccountController {
     private final MerchantBankAccountService bankAccountService;
 
     @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listAdminBankAccounts")
     public ResponseEntity<ApiResponse<PageResponse<BankAccountResponse>>> list(
             @RequestParam(required = false) BankAccountVerificationStatus status,
             @RequestParam(required = false) UUID businessProfileId,

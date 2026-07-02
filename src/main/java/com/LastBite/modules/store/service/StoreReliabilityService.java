@@ -106,7 +106,6 @@ public class StoreReliabilityService {
     private StoreReliabilityStats loadStats(Store store) {
         return statsRepository.findByStoreIdForUpdate(store.getId())
                 .orElseGet(() -> statsRepository.save(StoreReliabilityStats.builder()
-                        .storeId(store.getId())
                         .store(store)
                         .build()));
     }
@@ -122,10 +121,10 @@ public class StoreReliabilityService {
     private void recalculateEnforcement(StoreReliabilityStats stats) {
         Instant now = Instant.now(clock);
         long recentFaults = refundRepository.countStoreFaultRefundsSince(
-                stats.getStoreId(), STORE_FAULT_REASONS, COUNTED_REFUND_STATUSES, now.minus(WARNING_WINDOW));
-        long paidOrders = orderRepository.countPaidOrdersSince(stats.getStoreId(), now.minus(RATE_WINDOW));
+                stats.getId(), STORE_FAULT_REASONS, COUNTED_REFUND_STATUSES, now.minus(WARNING_WINDOW));
+        long paidOrders = orderRepository.countPaidOrdersSince(stats.getId(), now.minus(RATE_WINDOW));
         long faultOrders = refundRepository.countStoreFaultRefundsSince(
-                stats.getStoreId(), STORE_FAULT_REASONS, COUNTED_REFUND_STATUSES, now.minus(RATE_WINDOW));
+                stats.getId(), STORE_FAULT_REASONS, COUNTED_REFUND_STATUSES, now.minus(RATE_WINDOW));
 
         double faultRate = paidOrders == 0 ? 0 : (double) faultOrders / paidOrders;
         boolean shouldWarn = recentFaults >= WARNING_EVENT_THRESHOLD

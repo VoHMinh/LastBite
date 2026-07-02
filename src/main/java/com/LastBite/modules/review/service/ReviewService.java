@@ -109,6 +109,20 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
+    public List<ReviewResponse> getBagReviews(UUID bagId) {
+        return reviewRepository.findByBagIdAndVisibleTrueOrderByCreatedAtDesc(bagId).stream()
+                .map(review -> toResponse(review, reviewPhotoRepository.findAllByReviewId(review.getId())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewResponse getByOrderId(UUID orderId) {
+        return reviewRepository.findByOrderId(orderId)
+                .map(review -> toResponse(review, reviewPhotoRepository.findAllByReviewId(review.getId())))
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
     public StoreRatingSummaryResponse getStoreRatingSummary(UUID storeId) {
         StoreRatingSummary summary = summaryRepository.findById(storeId)
                 .orElseGet(() -> emptySummary(storeRepository.findById(storeId)
@@ -224,7 +238,6 @@ public class ReviewService {
 
     private StoreRatingSummary emptySummary(Store store) {
         return StoreRatingSummary.builder()
-                .store(store)
                 .storeId(store.getId())
                 .reviewCount(0)
                 .recentReviewCount(0)

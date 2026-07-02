@@ -25,6 +25,7 @@ public class MerchantSettlementController {
     private final SettlementService settlementService;
 
     @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listMerchantSettlements")
     public ResponseEntity<ApiResponse<Page<SettlementResponse>>> settlements(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "0") int page,
@@ -34,6 +35,7 @@ public class MerchantSettlementController {
     }
 
     @GetMapping("/payouts")
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listMerchantPayouts")
     public ResponseEntity<ApiResponse<Page<PayoutResponse>>> payouts(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "0") int page,

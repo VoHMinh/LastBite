@@ -41,7 +41,7 @@ public class AdminStoreController {
     private final AdminStoreReviewService reviewService;
 
     @GetMapping
-    @Operation(summary = "Danh sách cửa hàng theo trạng thái duyệt")
+    @Operation(operationId = "listAdminStores", summary = "Danh sách cửa hàng theo trạng thái duyệt")
     public ResponseEntity<ApiResponse<PageResponse<StoreDetailResponse>>> list(
             @RequestParam(defaultValue = "PENDING") VerificationStatus verificationStatus,
             @RequestParam(defaultValue = "0") int page,

@@ -54,11 +54,12 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
         SELECT s FROM Store s
         WHERE s.verificationStatus = :verification
           AND s.status = com.LastBite.modules.store.enums.StoreStatus.ACTIVE
-          AND (:keyword IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-               OR LOWER(s.address) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:keyword IS NULL 
+               OR LOWER(s.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
+               OR LOWER(s.address) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))
           AND (:category IS NULL OR s.category = :category)
-          AND (:city IS NULL OR LOWER(s.city) = LOWER(:city))
-          AND (:district IS NULL OR LOWER(s.district) = LOWER(:district))
+          AND (:city IS NULL OR LOWER(s.city) = LOWER(CAST(:city AS string)))
+          AND (:district IS NULL OR LOWER(s.district) = LOWER(CAST(:district AS string)))
         ORDER BY s.avgRating DESC, s.totalRatings DESC
     """)
     Page<Store> searchStores(VerificationStatus verification,

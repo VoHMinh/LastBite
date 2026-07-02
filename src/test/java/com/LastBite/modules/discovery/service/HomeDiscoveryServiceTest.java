@@ -130,7 +130,7 @@ class HomeDiscoveryServiceTest {
 
     @Test
     void migrationSeedsAllEightMvpCollections() throws Exception {
-        String migration = Files.readString(Path.of("src/main/resources/db/migration/V17__discovery_collections_ranking_engine.sql"));
+        String migration = Files.readString(Path.of("src/main/resources/db/migration/V18__discovery_collections_ranking_engine.sql"));
 
         for (String slug : List.of("near_you", "last_chance", "big_discount", "under_30k",
                 "new_stores", "top_rated", "bestseller_today", "recommended_for_you")) {

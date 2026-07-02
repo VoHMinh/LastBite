@@ -12,6 +12,7 @@ import com.LastBite.modules.bag.dto.response.StockCalendarResponse;
 import com.LastBite.modules.bag.dto.response.StockAuditLogResponse;
 import com.LastBite.modules.bag.dto.response.SurpriseBagResponse;
 import com.LastBite.modules.bag.service.SurpriseBagServicePort;
+import com.LastBite.modules.bag.enums.BagSize;
 import com.LastBite.modules.store.enums.StoreCategory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,7 +42,7 @@ public class MerchantBagController {
     private final SurpriseBagServicePort bagService;
 
     @PostMapping
-    @Operation(summary = "Tạo túi bất ngờ")
+    @Operation(operationId = "createMerchantBag", summary = "Tạo túi bất ngờ")
     public ResponseEntity<ApiResponse<SurpriseBagResponse>> create(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateSurpriseBagRequest request) {
@@ -49,7 +50,7 @@ public class MerchantBagController {
     }
 
     @GetMapping
-    @Operation(summary = "Danh sách túi của cửa hàng")
+    @Operation(operationId = "listMerchantBags", summary = "Danh sách túi của cửa hàng")
     public ResponseEntity<ApiResponse<PageResponse<SurpriseBagResponse>>> list(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "0") int page,
@@ -59,7 +60,7 @@ public class MerchantBagController {
     }
 
     @PatchMapping("/{bagId}")
-    @Operation(summary = "Sửa thông tin túi")
+    @Operation(operationId = "updateMerchantBag", summary = "Sửa thông tin túi")
     public ResponseEntity<ApiResponse<SurpriseBagResponse>> update(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID bagId,
@@ -68,7 +69,7 @@ public class MerchantBagController {
     }
 
     @DeleteMapping("/{bagId}")
-    @Operation(summary = "Xóa mềm túi")
+    @Operation(operationId = "deleteMerchantBag", summary = "Xóa mềm túi")
     public ResponseEntity<ApiResponse<Void>> delete(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID bagId) {
@@ -77,7 +78,7 @@ public class MerchantBagController {
     }
 
     @PatchMapping("/{bagId}/pause")
-    @Operation(summary = "Tạm dừng bán túi")
+    @Operation(operationId = "pauseMerchantBag", summary = "Tạm dừng bán túi")
     public ResponseEntity<ApiResponse<SurpriseBagResponse>> pause(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID bagId) {
@@ -85,7 +86,7 @@ public class MerchantBagController {
     }
 
     @PatchMapping("/{bagId}/resume")
-    @Operation(summary = "Mở bán lại túi")
+    @Operation(operationId = "resumeMerchantBag", summary = "Mở bán lại túi")
     public ResponseEntity<ApiResponse<SurpriseBagResponse>> resume(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID bagId) {
@@ -125,7 +126,7 @@ public class MerchantBagController {
     }
 
     @GetMapping("/{bagId}/audit-logs")
-    @Operation(summary = "Lịch sử thay đổi tồn kho")
+    @Operation(operationId = "listBagAuditLogs", summary = "Lịch sử thay đổi tồn kho")
     public ResponseEntity<ApiResponse<PageResponse<StockAuditLogResponse>>> auditLogs(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID bagId,
@@ -136,7 +137,7 @@ public class MerchantBagController {
     }
 
     @GetMapping("/price-tiers/categories")
-    @Operation(summary = "Danh sách danh mục đang có gói giá",
+    @Operation(operationId = "listBagPriceTierCategories", summary = "Danh sách danh mục đang có gói giá",
             description = "Bước 1: Lấy danh sách category mà Admin đã cấu hình gói giá. "
                     + "Cửa hàng chọn 1 category trước, rồi gọi /price-tiers?category=X để xem giá.")
     public ResponseEntity<ApiResponse<List<StoreCategory>>> priceTierCategories() {
@@ -144,11 +145,20 @@ public class MerchantBagController {
     }
 
     @GetMapping("/price-tiers")
-    @Operation(summary = "Danh sách gói giá theo danh mục",
+    @Operation(operationId = "listBagPriceTiers", summary = "Danh sách gói giá theo danh mục",
             description = "Bước 2: Sau khi chọn category, gọi API này để lấy các size túi và giá tương ứng.")
     public ResponseEntity<ApiResponse<List<BagPriceTierSummaryResponse>>> priceTiers(
             @RequestParam StoreCategory category) {
         return ResponseEntity.ok(ApiResponse.ok(bagService.listActivePriceTiers(category)));
+    }
+
+    @GetMapping("/price-tiers/exact")
+    @Operation(operationId = "getBagPriceTierExact", summary = "Lấy giá chính xác theo category và bagSize",
+            description = "Bước 3: Sau khi chọn cả category và bagSize, gọi API này để lấy giá chính xác.")
+    public ResponseEntity<ApiResponse<BagPriceTierSummaryResponse>> priceTierExact(
+            @RequestParam StoreCategory category,
+            @RequestParam BagSize bagSize) {
+        return ResponseEntity.ok(ApiResponse.ok(bagService.getActivePriceTier(category, bagSize)));
     }
 
     private UUID extractUserId(Jwt jwt) {

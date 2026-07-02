@@ -41,7 +41,7 @@ public class AdminDiscoveryCollectionController {
     private final AdminDiscoveryCollectionService collectionService;
 
     @GetMapping
-    @Operation(summary = "Danh sach discovery collections")
+    @Operation(operationId = "listDiscoveryCollections", summary = "Danh sach discovery collections")
     public ResponseEntity<ApiResponse<PageResponse<DiscoveryCollectionResponse>>> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {

@@ -25,6 +25,7 @@ public class UserVoucherController {
     private final VoucherApplicationService voucherApplicationService;
 
     @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(operationId = "listUserVouchers")
     public ResponseEntity<ApiResponse<PageResponse<UserVoucherResponse>>> wallet(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) UserVoucherStatus status,

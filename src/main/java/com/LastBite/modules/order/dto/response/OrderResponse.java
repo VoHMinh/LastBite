@@ -4,6 +4,7 @@ import com.LastBite.modules.order.enums.OrderStatus;
 import com.LastBite.modules.order.enums.OrderRefundStatus;
 import com.LastBite.modules.payment.enums.PaymentStatus;
 import com.LastBite.modules.promotion.enums.VoucherFundingSource;
+import com.LastBite.modules.review.dto.response.ReviewResponse;
 import lombok.Builder;
 import lombok.Data;
 
@@ -24,6 +25,7 @@ public class OrderResponse {
     private UUID bagId;
     private String bagName;
     private UUID dailyStockId;
+    private String bagImageUrl;
     private int quantity;
     private BigDecimal unitPrice;
     private BigDecimal platformFee;
@@ -60,4 +62,6 @@ public class OrderResponse {
     private String paymentQrCode;
     private Instant createdAt;
     private Instant updatedAt;
+    private ReviewResponse review;
+    private boolean alreadyLeaveReview;
 }

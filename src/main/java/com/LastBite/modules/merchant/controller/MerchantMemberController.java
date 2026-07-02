@@ -4,6 +4,7 @@ import com.LastBite.common.response.ApiResponse;
 import com.LastBite.modules.merchant.dto.request.CreateStoreMemberRequest;
 import com.LastBite.modules.merchant.dto.response.StoreMemberResponse;
 import com.LastBite.modules.merchant.service.MerchantMemberService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ public class MerchantMemberController {
     private final MerchantMemberService memberService;
 
     @PostMapping
+    @Operation(operationId = "createStoreMember", summary = "Tạo tài khoản nhân viên cho cửa hàng")
     public ResponseEntity<ApiResponse<StoreMemberResponse>> create(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,
@@ -33,6 +35,7 @@ public class MerchantMemberController {
     }
 
     @GetMapping
+    @Operation(operationId = "listStoreMembers", summary = "Lấy danh sách nhân viên của cửa hàng")
     public ResponseEntity<ApiResponse<List<StoreMemberResponse>>> list(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId) {
@@ -40,6 +43,7 @@ public class MerchantMemberController {
     }
 
     @PatchMapping("/{memberId}/suspend")
+    @Operation(operationId = "suspendStoreMember", summary = "Tạm ngưng tài khoản nhân viên")
     public ResponseEntity<ApiResponse<StoreMemberResponse>> suspend(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId,

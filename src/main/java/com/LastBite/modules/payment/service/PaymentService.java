@@ -265,6 +265,55 @@ public class PaymentService {
     }
 
     @Transactional
+    public void simulatePaymentSuccess(Long providerOrderCode, String reference) {
+        Payment payment = paymentRepository.findByProviderOrderCode(providerOrderCode)
+                .orElseThrow(() -> new ApiException(ErrorCode.RESOURCE_NOT_FOUND, "Payment not found"));
+
+        if (payment.getStatus() == PaymentStatus.SUCCEEDED) {
+            return;
+        }
+
+        Instant now = Instant.now(clock);
+
+        PaymentTransaction transaction = transactionRepository.findByProviderAndProviderTransactionId(payment.getProvider(), reference)
+                .orElseGet(() -> transactionRepository.save(PaymentTransaction.builder()
+                        .payment(payment)
+                        .provider(payment.getProvider())
+                        .providerTransactionId(reference)
+                        .amount(payment.getAmount())
+                        .currency(payment.getCurrency())
+                        .status(PaymentTransactionStatus.SUCCEEDED)
+                        .providerCode("00")
+                        .providerDescription("Fake payment simulation")
+                        .paidAt(now)
+                        .rawPayload("{\"simulated\": true}")
+                        .build()));
+
+        payment.setStatus(PaymentStatus.SUCCEEDED);
+        payment.setPaidAt(transaction.getPaidAt());
+
+        Order order = orderRepository.findByIdForUpdate(payment.getOrder().getId())
+                .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getStatus() == OrderStatus.PENDING_PAYMENT && !payment.getExpiresAt().isBefore(now)) {
+            captureReservedStock(order);
+            OrderStatus previous = order.getStatus();
+            order.setStatus(OrderStatus.PAID);
+            order.setPaidAt(now);
+            order.setPaymentExpiresAt(payment.getExpiresAt());
+            statusHistoryService.record(order, previous, OrderStatus.PAID, null, AuditActorType.SYSTEM,
+                    "Fake payment simulated", "reference=" + reference);
+            voucherApplicationService.redeemForOrder(order);
+            ledgerService.recordPaymentCaptured(order, payment);
+            reliabilityService.recordOrderPaid(order);
+            notificationService.notifyPaymentSuccess(order);
+            notificationService.notifyMerchantNewPaidOrder(order);
+        } else {
+            throw new ApiException(ErrorCode.INVALID_REQUEST, "Cannot complete payment: order status is " + order.getStatus());
+        }
+    }
+
+    @Transactional
     public void cancelPendingPayment(Payment payment, String reason) {
         if (payment == null || payment.getStatus() != PaymentStatus.PENDING) {
             return;

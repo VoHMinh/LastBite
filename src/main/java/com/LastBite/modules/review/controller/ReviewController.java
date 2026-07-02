@@ -40,6 +40,11 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.ok(reviewService.listStoreReviews(storeId)));
     }
 
+    @GetMapping("/api/v1/bags/{bagId}/reviews")
+    public ResponseEntity<ApiResponse<List<ReviewResponse>>> getBagReviews(@PathVariable UUID bagId) {
+        return ResponseEntity.ok(ApiResponse.ok(reviewService.getBagReviews(bagId)));
+    }
+
     @GetMapping("/api/v1/stores/{storeId}/rating-summary")
     public ResponseEntity<ApiResponse<StoreRatingSummaryResponse>> ratingSummary(@PathVariable UUID storeId) {
         return ResponseEntity.ok(ApiResponse.ok(reviewService.getStoreRatingSummary(storeId)));
