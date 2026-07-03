@@ -15,8 +15,10 @@ WORKDIR /build
 COPY ./src src/
 RUN --mount=type=bind,source=pom.xml,target=pom.xml \
     --mount=type=cache,target=/root/.m2 \
+    ./mvnw test -Dtest=JacksonConfigTest,SecurityConfigTest && \
     ./mvnw package -DskipTests && \
-    mv target/$(./mvnw help:evaluate -Dexpression=project.artifactId -q -DforceStdout)-$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout).jar target/app.jar
+    mv target/$(./mvnw help:evaluate -Dexpression=project.artifactId -q -DforceStdout)-$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout).jar target/app.jar && \
+    jar tf target/app.jar | grep -q 'BOOT-INF/classes/com/LastBite/common/config/JacksonConfig.class'
 
 FROM package AS extract
 

@@ -1,9 +1,10 @@
 package com.LastBite.common.security;
 
+import com.LastBite.common.config.JacksonConfig;
 import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.common.response.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -31,12 +32,19 @@ import java.time.Instant;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthConverter jwtAuthConverter;
     private final ObjectMapper objectMapper;
+
+    public SecurityConfig(JwtTokenProvider jwtTokenProvider,
+                          JwtAuthConverter jwtAuthConverter,
+                          ObjectProvider<ObjectMapper> objectMapperProvider) {
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.jwtAuthConverter = jwtAuthConverter;
+        this.objectMapper = objectMapperProvider.getIfAvailable(JacksonConfig::configuredObjectMapper);
+    }
 
     /** Endpoint công khai KHÔNG yêu cầu xác thực. */
     private static final String[] PUBLIC_ENDPOINTS = {

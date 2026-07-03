@@ -49,6 +49,8 @@ services:
 
   # ── Spring Boot Backend ──────────────────────────────
   backend:
+    image: lastbite-backend:dev
+    pull_policy: build
     build:
       context: .
       dockerfile: Dockerfile
