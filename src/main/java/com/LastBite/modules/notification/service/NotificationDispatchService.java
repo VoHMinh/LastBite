@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -17,9 +18,18 @@ public class NotificationDispatchService {
     private final AppNotificationRepository notificationRepository;
     private final PushNotificationService pushNotificationService;
 
-    @Async
-    @Transactional(readOnly = true)
+    @Async("notificationTaskExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public void dispatchPushAsync(UUID notificationId) {
+        dispatch(notificationId);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     public void dispatchPush(UUID notificationId) {
+        dispatch(notificationId);
+    }
+
+    private void dispatch(UUID notificationId) {
         try {
             notificationRepository.findByIdWithRecipient(notificationId)
                     .ifPresent(pushNotificationService::sendNotification);

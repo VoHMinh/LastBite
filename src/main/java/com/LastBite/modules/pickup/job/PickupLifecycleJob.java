@@ -13,7 +13,10 @@ public class PickupLifecycleJob {
 
     private final PickupService pickupService;
 
-    @Scheduled(fixedDelayString = "${app.pickup.no-show-fixed-delay-ms:60000}")
+    @Scheduled(
+            fixedDelayString = "${app.pickup.no-show-fixed-delay-ms:60000}",
+            initialDelayString = "${app.pickup.no-show-initial-delay-ms:30000}"
+    )
     public void expireNoShows() {
         int count = pickupService.expireNoShows();
         if (count > 0) {

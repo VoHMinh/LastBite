@@ -25,6 +25,8 @@ import com.LastBite.modules.pickup.repository.PickupEventRepository;
 import com.LastBite.modules.store.service.StoreReliabilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +41,7 @@ public class PickupService {
 
     private static final Duration PICKUP_GRACE = Duration.ofMinutes(15);
     private static final Duration DISPUTE_WINDOW = Duration.ofDays(30);
+    private static final int MAX_NO_SHOW_BATCH_SIZE = 100;
     private static final List<OrderStatus> NO_SHOW_CANDIDATES = List.of(OrderStatus.PAID, OrderStatus.READY_FOR_PICKUP);
     private static final Set<Integer> IMPACT_MILESTONES = Set.of(10, 25, 50, 100);
 
@@ -52,6 +55,9 @@ public class PickupService {
     private final NotificationServicePort notificationService;
     private final StoreReliabilityService reliabilityService;
     private final Clock clock;
+
+    @Value("${app.pickup.no-show-batch-size:20}")
+    private int noShowBatchSize;
 
     @Transactional
     @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
@@ -103,8 +109,10 @@ public class PickupService {
     public int expireNoShows() {
         LocalDate today = LocalDate.now(clock);
         LocalTime cutoff = LocalTime.now(clock).minusMinutes(PICKUP_GRACE.toMinutes());
+        int batchSize = Math.max(1, Math.min(noShowBatchSize, MAX_NO_SHOW_BATCH_SIZE));
         int count = 0;
-        for (Order order : orderRepository.findOrdersPastPickupWindow(NO_SHOW_CANDIDATES, today, cutoff)) {
+        for (Order order : orderRepository.findOrdersPastPickupWindow(
+                NO_SHOW_CANDIDATES, today, cutoff, PageRequest.of(0, batchSize))) {
             Order locked = orderRepository.findByIdForUpdate(order.getId()).orElse(null);
             if (locked == null || (locked.getStatus() != OrderStatus.PAID && locked.getStatus() != OrderStatus.READY_FOR_PICKUP)) {
                 continue;

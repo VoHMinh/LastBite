@@ -139,10 +139,12 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
         JOIN FETCH o.bag
         WHERE o.status IN :statuses
           AND (o.pickupDate < :today OR (o.pickupDate = :today AND o.pickupEndTime <= :cutoffTime))
+        ORDER BY o.pickupDate ASC, o.pickupEndTime ASC, o.createdAt ASC
     """)
     List<Order> findOrdersPastPickupWindow(@Param("statuses") List<OrderStatus> statuses,
                                            @Param("today") LocalDate today,
-                                           @Param("cutoffTime") LocalTime cutoffTime);
+                                           @Param("cutoffTime") LocalTime cutoffTime,
+                                           Pageable pageable);
 
     @Query("""
         SELECT COUNT(o) FROM Order o
