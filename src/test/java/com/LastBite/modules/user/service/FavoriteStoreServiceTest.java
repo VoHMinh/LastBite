@@ -11,6 +11,7 @@ import com.LastBite.modules.store.enums.VerificationStatus;
 import com.LastBite.modules.store.repository.StoreRepository;
 import com.LastBite.modules.user.entity.FavoriteStore;
 import com.LastBite.modules.user.repository.FavoriteStoreRepository;
+import com.LastBite.modules.user.repository.UserDiscoveryPreferenceRepository;
 import com.LastBite.modules.user.service.impl.FavoriteStoreService;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -29,8 +30,9 @@ class FavoriteStoreServiceTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final StoreRepository storeRepository = mock(StoreRepository.class);
     private final MediaUrlService mediaUrlService = mock(MediaUrlService.class);
+    private final UserDiscoveryPreferenceRepository discoveryPreferenceRepository = mock(UserDiscoveryPreferenceRepository.class);
     private final FavoriteStoreService service = new FavoriteStoreService(
-            favoriteStoreRepository, userRepository, storeRepository, mediaUrlService);
+            favoriteStoreRepository, userRepository, storeRepository, mediaUrlService, discoveryPreferenceRepository);
 
     @Test
     void addCreatesFavoriteStore() {
@@ -92,7 +94,7 @@ class FavoriteStoreServiceTest {
         when(favoriteStoreRepository.findByUserIdOrderByCreatedAtDesc(userId))
                 .thenReturn(List.of(FavoriteStore.builder().store(store).build()));
 
-        var result = service.list(userId);
+        var result = service.list(userId, null, null);
 
         assertEquals(1, result.size());
         assertEquals(store.getId(), result.getFirst().getId());

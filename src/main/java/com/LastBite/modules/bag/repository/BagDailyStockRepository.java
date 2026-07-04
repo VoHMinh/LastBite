@@ -109,7 +109,8 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
                 rs.total_bags_listed AS "storeTotalBagsListed",
                 rs.total_bags_fulfilled AS "storeTotalBagsFulfilled",
                 rs.fulfillment_rate AS "storeFulfillmentRate",
-                rs.warning_count AS "storeWarningCount"
+                rs.warning_count AS "storeWarningCount",
+                st.verification_status AS "storeVerificationStatus"
             FROM bag_daily_stocks s
             JOIN surprise_bags b ON b.id = s.bag_id
             JOIN stores st ON st.id = s.store_id
@@ -196,7 +197,8 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             rs.total_bags_listed AS "storeTotalBagsListed",
             rs.total_bags_fulfilled AS "storeTotalBagsFulfilled",
             rs.fulfillment_rate AS "storeFulfillmentRate",
-            rs.warning_count AS "storeWarningCount"
+            rs.warning_count AS "storeWarningCount",
+            st.verification_status AS "storeVerificationStatus"
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id
@@ -269,11 +271,18 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             s.sold AS sold,
             (s.quantity - s.reserved - s.sold) AS available,
             s.status AS "stockStatus",
-            CAST(NULL AS double precision) AS "distanceKm",
+            (CASE WHEN :lat IS NOT NULL AND :lng IS NOT NULL AND st.lat IS NOT NULL AND st.lng IS NOT NULL
+                  THEN (6371 * acos(least(1, greatest(-1,
+                      cos(radians(CAST(:lat AS double precision))) * cos(radians(st.lat)) *
+                      cos(radians(st.lng) - radians(CAST(:lng AS double precision))) +
+                      sin(radians(CAST(:lat AS double precision))) * sin(radians(st.lat))
+                  ))))
+                  ELSE CAST(NULL AS double precision) END) AS "distanceKm",
             rs.total_bags_listed AS "storeTotalBagsListed",
             rs.total_bags_fulfilled AS "storeTotalBagsFulfilled",
             rs.fulfillment_rate AS "storeFulfillmentRate",
-            rs.warning_count AS "storeWarningCount"
+            rs.warning_count AS "storeWarningCount",
+            st.verification_status AS "storeVerificationStatus"
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id
@@ -290,7 +299,9 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
     """, nativeQuery = true)
     Optional<BagDiscoveryProjection> findPublicBagDetail(@Param("bagId") UUID bagId,
                                                          @Param("date") LocalDate date,
-                                                         @Param("nowTime") LocalTime nowTime);
+                                                         @Param("nowTime") LocalTime nowTime,
+                                                         @Param("lat") Double lat,
+                                                         @Param("lng") Double lng);
 
     @Query(value = """
         SELECT
@@ -338,7 +349,8 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             rs.total_bags_listed AS "storeTotalBagsListed",
             rs.total_bags_fulfilled AS "storeTotalBagsFulfilled",
             rs.fulfillment_rate AS "storeFulfillmentRate",
-            rs.warning_count AS "storeWarningCount"
+            rs.warning_count AS "storeWarningCount",
+            st.verification_status AS "storeVerificationStatus"
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id
@@ -416,7 +428,8 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
                     cos(radians(CAST(:lat AS double precision))) * cos(radians(st.lat)) *
                     cos(radians(st.lng) - radians(CAST(:lng AS double precision))) +
                     sin(radians(CAST(:lat AS double precision))) * sin(radians(st.lat))
-                )))) AS "distanceKm"
+                )))) AS "distanceKm",
+                st.verification_status AS "storeVerificationStatus"
             FROM bag_daily_stocks s
             JOIN surprise_bags b ON b.id = s.bag_id
             JOIN stores st ON st.id = s.store_id
@@ -514,7 +527,8 @@ public interface BagDailyStockRepository extends JpaRepository<BagDailyStock, UU
             s.sold AS sold,
             (s.quantity - s.reserved - s.sold) AS available,
             s.status AS "stockStatus",
-            CAST(NULL AS double precision) AS "distanceKm"
+            CAST(NULL AS double precision) AS "distanceKm",
+            st.verification_status AS "storeVerificationStatus"
         FROM bag_daily_stocks s
         JOIN surprise_bags b ON b.id = s.bag_id
         JOIN stores st ON st.id = s.store_id

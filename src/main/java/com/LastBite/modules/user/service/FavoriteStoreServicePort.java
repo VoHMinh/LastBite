@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface FavoriteStoreServicePort {
 
-    List<StoreResponse> list(UUID userId);
+    List<StoreResponse> list(UUID userId, Double lat, Double lng);
 
     StoreResponse add(UUID userId, UUID storeId);
 

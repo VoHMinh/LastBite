@@ -84,6 +84,11 @@ public class BagDiscoveryMapper {
                 .distanceKm(row.getDistanceKm() == null ? null : Math.round(row.getDistanceKm() * 100.0) / 100.0)
                 .minutesUntilPickup(minutesUntilPickup(row.getPickupStartTime(), row.getPickupEndTime()))
                 .pickupActive(isPickupActive(row.getPickupStartTime(), row.getPickupEndTime()))
+                .storeTotalBagsListed(row.getStoreTotalBagsListed())
+                .storeTotalBagsFulfilled(row.getStoreTotalBagsFulfilled())
+                .storeFulfillmentRate(row.getStoreFulfillmentRate())
+                .storeWarningCount(row.getStoreWarningCount())
+                .storeVerificationStatus(row.getStoreVerificationStatus())
                 .build();
     }
 
@@ -135,6 +140,11 @@ public class BagDiscoveryMapper {
                 .distanceKm(summary.getDistanceKm())
                 .minutesUntilPickup(summary.getMinutesUntilPickup())
                 .pickupActive(summary.isPickupActive())
+                .storeTotalBagsListed(summary.getStoreTotalBagsListed())
+                .storeTotalBagsFulfilled(summary.getStoreTotalBagsFulfilled())
+                .storeFulfillmentRate(summary.getStoreFulfillmentRate())
+                .storeWarningCount(summary.getStoreWarningCount())
+                .storeVerificationStatus(summary.getStoreVerificationStatus())
                 .build();
     }
 

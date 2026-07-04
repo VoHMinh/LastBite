@@ -31,6 +31,7 @@ public class StoreResponse implements Serializable {
     private String city;
     private Double lat;
     private Double lng;
+    private Double distanceKm;
     private String coverImageUrl;
     private String logoUrl;
     private List<String> galleryImageUrls;

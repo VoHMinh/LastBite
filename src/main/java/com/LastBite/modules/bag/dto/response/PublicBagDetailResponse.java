@@ -72,4 +72,5 @@ public class PublicBagDetailResponse implements Serializable {
     private Integer storeTotalBagsFulfilled;
     private Double storeFulfillmentRate;
     private Integer storeWarningCount;
+    private String storeVerificationStatus;
 }

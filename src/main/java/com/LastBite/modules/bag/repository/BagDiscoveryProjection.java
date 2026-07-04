@@ -54,4 +54,5 @@ public interface BagDiscoveryProjection {
     Integer getStoreTotalBagsFulfilled();
     Double getStoreFulfillmentRate();
     Integer getStoreWarningCount();
+    String getStoreVerificationStatus();
 }

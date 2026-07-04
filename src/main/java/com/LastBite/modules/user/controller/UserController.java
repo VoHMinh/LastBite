@@ -146,27 +146,30 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(addressService.setDefault(userId, addressId)));
     }
 
-    // â”€â”€ Favorite Stores â”€â”€
+    // ── Favorite Stores ──
 
     @GetMapping("/me/favorite-stores")
-    @Operation(summary = "Danh sÃ¡ch cá»­a hÃ ng yÃªu thÃ­ch")
-    public ResponseEntity<ApiResponse<List<StoreResponse>>> getFavoriteStores(@AuthenticationPrincipal Jwt jwt) {
+    @Operation(summary = "Danh sách cửa hàng yêu thích")
+    public ResponseEntity<ApiResponse<List<StoreResponse>>> getFavoriteStores(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
         UUID userId = extractUserId(jwt);
-        return ResponseEntity.ok(ApiResponse.ok(favoriteStoreService.list(userId)));
+        return ResponseEntity.ok(ApiResponse.ok(favoriteStoreService.list(userId, lat, lng)));
     }
 
     @PostMapping("/me/favorite-stores/{storeId}")
-    @Operation(summary = "ThÃªm cá»­a hÃ ng vÃ o danh sÃ¡ch yÃªu thÃ­ch")
+    @Operation(summary = "Thêm cửa hàng vào danh sách yêu thích")
     public ResponseEntity<ApiResponse<StoreResponse>> addFavoriteStore(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId) {
         UUID userId = extractUserId(jwt);
         return ResponseEntity.ok(ApiResponse.ok(favoriteStoreService.add(userId, storeId),
-                "ÄÃ£ thÃªm cá»­a hÃ ng yÃªu thÃ­ch"));
+                "Đã thêm cửa hàng yêu thích"));
     }
 
     @DeleteMapping("/me/favorite-stores/{storeId}")
-    @Operation(summary = "XÃ³a cá»­a hÃ ng khá»i danh sÃ¡ch yÃªu thÃ­ch")
+    @Operation(summary = "Xóa cửa hàng khỏi danh sách yêu thích")
     public ResponseEntity<ApiResponse<Void>> deleteFavoriteStore(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID storeId) {
@@ -180,9 +183,11 @@ public class UserController {
     @GetMapping("/me/favorite-bags")
     @Operation(summary = "Danh sach tui yeu thich")
     public ResponseEntity<ApiResponse<List<PublicBagSummaryResponse>>> getFavoriteBags(
-            @AuthenticationPrincipal Jwt jwt) {
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng) {
         UUID userId = extractUserId(jwt);
-        return ResponseEntity.ok(ApiResponse.ok(favoriteBagService.list(userId)));
+        return ResponseEntity.ok(ApiResponse.ok(favoriteBagService.list(userId, lat, lng)));
     }
 
     @PostMapping("/me/favorite-bags/{bagId}")

@@ -123,6 +123,8 @@ public class StoreService implements StoreServicePort {
                 .stream().map(this::toDetailResponse).toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public StoreDetailResponse getMyStore(UUID ownerId) {
         return toDetailResponse(firstOwnedStore(ownerId));
     }
