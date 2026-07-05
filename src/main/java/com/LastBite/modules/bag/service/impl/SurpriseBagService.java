@@ -82,12 +82,6 @@ public class SurpriseBagService implements SurpriseBagServicePort {
     private final MediaUrlService mediaUrlService;
     private final Clock clock;
 
-    @Transactional(readOnly = true)
-    public SurpriseBagResponse getById(UUID actorId, UUID bagId) {
-        SurpriseBag bag = getOwnedBag(actorId, bagId);
-        return toBagResponse(bag, findTodayStock(bag.getId()));
-    }
-
     @Transactional
     @CacheEvict(value = {"bag-discovery", "home-discovery", "bag-detail", "store-bags"}, allEntries = true)
     public SurpriseBagResponse create(UUID ownerId, CreateSurpriseBagRequest request) {

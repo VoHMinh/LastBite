@@ -2,7 +2,6 @@ package com.LastBite.modules.user.service;
 
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.auth.repository.UserRepository;
-import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.user.dto.request.UpdateDiscoveryPreferenceRequest;
 import com.LastBite.modules.user.entity.UserDiscoveryPreference;
 import com.LastBite.modules.user.enums.CollectionTimeSlot;
@@ -39,8 +38,7 @@ class DiscoveryPreferenceServiceTest {
 
         var response = service.get(userId);
 
-        assertEquals(PreferredDiet.MEAT, response.getPreferredDiet());
-        assertEquals(BagType.STANDARD, response.getPreferredBagType());
+        assertEquals(PreferredDiet.NOT_SPECIFIED, response.getPreferredDiet());
         assertTrue(response.getPreferredCollectionTimes().isEmpty());
         assertEquals(DiscoveryOnboardingStatus.NOT_STARTED, response.getOnboardingStatus());
         assertTrue(response.isShouldShowOnboarding());
@@ -65,7 +63,6 @@ class DiscoveryPreferenceServiceTest {
         var response = service.update(userId, request);
 
         assertEquals(PreferredDiet.VEGETARIAN, response.getPreferredDiet());
-        assertEquals(BagType.STANDARD, response.getPreferredBagType());
         assertEquals(Set.of(CollectionTimeSlot.EVENING, CollectionTimeSlot.LATE_NIGHT),
                 response.getPreferredCollectionTimes());
         assertEquals("Syracuse", response.getDefaultLocationLabel());

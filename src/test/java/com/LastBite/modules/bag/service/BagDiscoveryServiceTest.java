@@ -112,7 +112,7 @@ class BagDiscoveryServiceTest {
         mockMediaUrls();
         UUID userId = UUID.randomUUID();
         when(discoveryPreferenceRepository.findByUserId(userId))
-                .thenReturn(Optional.of(preference(PreferredDiet.MEAT, Set.of(), 43.0481, -76.1474, 22.5)));
+                .thenReturn(Optional.of(preference(PreferredDiet.NOT_SPECIFIED, Set.of(), 43.0481, -76.1474, 22.5)));
         BagDiscoveryProjection projection = row(DietType.MEAT, BagType.MEAL);
         when(stockRepository.findDiscoveryCandidatesWithLocation(
                 any(), any(), anyDouble(), anyDouble(), anyDouble(), any(), any(), any(), any(), any(), anyInt()))
@@ -139,7 +139,7 @@ class BagDiscoveryServiceTest {
         mockMediaUrls();
         UUID userId = UUID.randomUUID();
         when(discoveryPreferenceRepository.findByUserId(userId))
-                .thenReturn(Optional.of(preference(PreferredDiet.MEAT, Set.of(), 43.0481, -76.1474, 22.5)));
+                .thenReturn(Optional.of(preference(PreferredDiet.NOT_SPECIFIED, Set.of(), 43.0481, -76.1474, 22.5)));
         BagDiscoveryProjection projection = row(DietType.MEAT, BagType.MEAL);
         when(stockRepository.findDiscoveryCandidatesWithLocation(
                 any(), any(), anyDouble(), anyDouble(), anyDouble(), any(), any(), any(), any(), any(), anyInt()))

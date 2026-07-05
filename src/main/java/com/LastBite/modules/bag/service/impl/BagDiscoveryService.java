@@ -227,7 +227,8 @@ public class BagDiscoveryService implements BagDiscoveryServicePort {
         if (preference == null) return false;
         boolean hasDietPreference = !explicitDietFilter
                 && preference.getPreferredDiet() != null
-                && preference.getPreferredDiet() != PreferredDiet.MEAT;
+                && preference.getPreferredDiet() != PreferredDiet.EAT_EVERYTHING
+                && preference.getPreferredDiet() != PreferredDiet.NOT_SPECIFIED;
         boolean hasCollectionTimePreference = preference.getPreferredCollectionTimes() != null
                 && !preference.getPreferredCollectionTimes().isEmpty();
         return hasDietPreference || hasCollectionTimePreference;
@@ -254,8 +255,8 @@ public class BagDiscoveryService implements BagDiscoveryServicePort {
                 if (bagDietType == DietType.VEGAN) yield DIET_COMPATIBLE_SCORE;
                 yield 0;
             }
-            case MEAT -> 0;
             case VEGAN -> bagDietType == DietType.VEGAN ? DIET_MATCH_SCORE : 0;
+            case EAT_EVERYTHING, NOT_SPECIFIED -> 0;
         };
     }
 

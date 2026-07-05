@@ -1,6 +1,5 @@
 package com.LastBite.modules.user.dto.request;
 
-import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.modules.user.enums.CollectionTimeSlot;
 import com.LastBite.modules.user.enums.PreferredDiet;
 import jakarta.validation.constraints.DecimalMax;
@@ -14,8 +13,6 @@ import java.util.Set;
 public class UpdateDiscoveryPreferenceRequest {
 
     private PreferredDiet preferredDiet;
-
-    private BagType preferredBagType;
 
     private Set<CollectionTimeSlot> preferredCollectionTimes;
 
