@@ -20,6 +20,8 @@ import java.util.UUID;
 
 public interface SurpriseBagServicePort {
 
+    SurpriseBagResponse getById(UUID actorId, UUID bagId);
+
     SurpriseBagResponse create(UUID ownerId, CreateSurpriseBagRequest request);
 
     SurpriseBagResponse create(UUID actorId, UUID storeId, CreateSurpriseBagRequest request);

@@ -3,14 +3,17 @@ package com.LastBite.modules.payment.gateway;
 import com.LastBite.modules.payment.config.PaymentProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "app.payments", name = "gateway", havingValue = "payos")
@@ -45,8 +48,31 @@ public class PayOsPaymentGatewayAdapter implements PaymentGatewayPort {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(payload)
                 .retrieve()
+                .onStatus(status -> status.isError(), (req, res) -> {
+                    byte[] bodyBytes = res.getBody() == null ? new byte[0] : res.getBody().readAllBytes();
+                    String body = new String(bodyBytes, StandardCharsets.UTF_8);
+                    throw new RuntimeException("PayOS error HTTP " + res.getStatusCode() + ": " + body);
+                })
                 .body(Map.class);
-        Map<String, Object> data = response == null ? Map.of() : (Map<String, Object>) response.getOrDefault("data", Map.of());
+
+        if (response == null) {
+            throw new IllegalStateException("PayOS returned null body for orderCode=" + command.orderCode());
+        }
+
+        String code = stringValue(response.get("code"));
+        Object desc = response.get("desc");
+        if (!"00".equals(code)) {
+            throw new IllegalStateException("PayOS rejected orderCode=" + command.orderCode()
+                    + " code=" + code + " desc=" + desc + " fullResponse=" + response);
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = (Map<String, Object>) response.get("data");
+        if (data == null) {
+            throw new IllegalStateException("PayOS returned code=00 but data is null for orderCode="
+                    + command.orderCode() + " fullResponse=" + response);
+        }
+
         return new PaymentLinkResult(
                 stringValue(data.get("paymentLinkId")),
                 stringValue(data.get("status")),

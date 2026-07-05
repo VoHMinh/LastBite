@@ -1,5 +1,6 @@
 package com.LastBite.modules.user.service.impl;
 
+import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
 import com.LastBite.modules.auth.entity.User;
@@ -48,8 +49,11 @@ public class DiscoveryPreferenceService implements DiscoveryPreferenceServicePor
                 .orElseGet(() -> newPreference(userId));
 
         preference.setPreferredDiet(request.getPreferredDiet() == null
-                ? PreferredDiet.NOT_SPECIFIED
+                ? PreferredDiet.MEAT
                 : request.getPreferredDiet());
+        preference.setPreferredBagType(request.getPreferredBagType() == null
+                ? BagType.STANDARD
+                : request.getPreferredBagType());
         preference.setPreferredCollectionTimes(normalizeSlots(request.getPreferredCollectionTimes()));
         applyLocation(preference, request);
         preference.setOnboardingStatus(DiscoveryOnboardingStatus.COMPLETED);
@@ -72,7 +76,8 @@ public class DiscoveryPreferenceService implements DiscoveryPreferenceServicePor
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
         return UserDiscoveryPreference.builder()
                 .user(user)
-                .preferredDiet(PreferredDiet.NOT_SPECIFIED)
+                .preferredDiet(PreferredDiet.MEAT)
+                .preferredBagType(BagType.STANDARD)
                 .preferredCollectionTimes(new LinkedHashSet<>())
                 .onboardingStatus(DiscoveryOnboardingStatus.NOT_STARTED)
                 .build();
@@ -119,7 +124,8 @@ public class DiscoveryPreferenceService implements DiscoveryPreferenceServicePor
 
     private DiscoveryPreferenceResponse defaultResponse() {
         return DiscoveryPreferenceResponse.builder()
-                .preferredDiet(PreferredDiet.NOT_SPECIFIED)
+                .preferredDiet(PreferredDiet.MEAT)
+                .preferredBagType(BagType.STANDARD)
                 .preferredCollectionTimes(new LinkedHashSet<>())
                 .onboardingStatus(DiscoveryOnboardingStatus.NOT_STARTED)
                 .shouldShowOnboarding(true)
@@ -131,6 +137,7 @@ public class DiscoveryPreferenceService implements DiscoveryPreferenceServicePor
         return DiscoveryPreferenceResponse.builder()
                 .id(preference.getId())
                 .preferredDiet(preference.getPreferredDiet())
+                .preferredBagType(preference.getPreferredBagType())
                 .preferredCollectionTimes(normalizeSlots(preference.getPreferredCollectionTimes()))
                 .defaultLocationLabel(preference.getDefaultLocationLabel())
                 .defaultLat(preference.getDefaultLat())
