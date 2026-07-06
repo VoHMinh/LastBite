@@ -1,5 +1,6 @@
 package com.LastBite.modules.user.entity;
 
+import com.LastBite.modules.bag.enums.BagType;
 import com.LastBite.common.entity.BaseEntity;
 import com.LastBite.modules.auth.entity.User;
 import com.LastBite.modules.user.enums.CollectionTimeSlot;
@@ -44,7 +45,12 @@ public class UserDiscoveryPreference extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "preferred_diet", nullable = false, length = 30)
     @Builder.Default
-    private PreferredDiet preferredDiet = PreferredDiet.NOT_SPECIFIED;
+    private PreferredDiet preferredDiet = PreferredDiet.MEAT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "preferred_bag_type", nullable = false, length = 20)
+    @Builder.Default
+    private BagType preferredBagType = BagType.STANDARD;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "user_preferred_collection_times",

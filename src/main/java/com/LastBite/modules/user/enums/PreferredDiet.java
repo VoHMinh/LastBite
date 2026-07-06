@@ -1,8 +1,7 @@
 package com.LastBite.modules.user.enums;
 
 public enum PreferredDiet {
-    EAT_EVERYTHING,
+    MEAT,
     VEGETARIAN,
-    VEGAN,
-    NOT_SPECIFIED
+    VEGAN
 }

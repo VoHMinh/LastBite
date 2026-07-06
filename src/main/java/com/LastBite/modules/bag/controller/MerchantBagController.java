@@ -41,6 +41,15 @@ public class MerchantBagController {
 
     private final SurpriseBagServicePort bagService;
 
+    @GetMapping("/{bagId}")
+    @PreAuthorize("hasAnyRole('MERCHANT_OWNER','MANAGER','STAFF')")
+    @Operation(operationId = "getMerchantBag", summary = "Lấy chi tiết một túi")
+    public ResponseEntity<ApiResponse<SurpriseBagResponse>> getById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID bagId) {
+        return ResponseEntity.ok(ApiResponse.ok(bagService.getById(extractUserId(jwt), bagId)));
+    }
+
     @PostMapping
     @Operation(operationId = "createMerchantBag", summary = "Tạo túi bất ngờ")
     public ResponseEntity<ApiResponse<SurpriseBagResponse>> create(
