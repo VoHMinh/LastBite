@@ -68,9 +68,12 @@ public class BagDiscoveryService implements BagDiscoveryServicePort {
         return discoverInternal(userId, keyword, lat, lng, radiusKm, category, dietType, bagType, district, sort, limit);
     }
 
-    @Cacheable(value = "bag-detail", key = "#bagId + ':' + #userId")
-    public PublicBagDetailResponse detail(UUID bagId, UUID userId) {
-        BagDiscoveryProjection row = stockRepository.findPublicBagDetail(bagId, LocalDate.now(clock), LocalTime.now(clock))
+    @Cacheable(value = "bag-detail", key = "#bagId + ':' + #userId + ':' + #lat + ':' + #lng")
+    public PublicBagDetailResponse detail(UUID bagId, UUID userId, Double lat, Double lng) {
+        UserDiscoveryPreference preference = loadPreference(userId);
+        LocationContext location = resolveLocation(preference, lat, lng, null);
+        BagDiscoveryProjection row = stockRepository.findPublicBagDetail(bagId, LocalDate.now(clock), LocalTime.now(clock),
+                        location.lat(), location.lng())
                 .orElseThrow(() -> new ApiException(ErrorCode.BAG_NOT_FOUND));
         return mapper.toDetail(row, userId);
     }

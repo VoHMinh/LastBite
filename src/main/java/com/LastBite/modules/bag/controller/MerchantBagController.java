@@ -59,6 +59,20 @@ public class MerchantBagController {
         return ResponseEntity.ok(ApiResponse.ok(bagService.list(extractUserId(jwt), pageable)));
     }
 
+    @GetMapping("/store/{storeId}")
+    @PreAuthorize("hasAnyRole('MERCHANT_OWNER','MANAGER','STAFF')")
+    @Operation(operationId = "listMerchantBagsByStore",
+            summary = "Danh sách túi của một cửa hàng cụ thể",
+            description = "Trả về các túi thuộc cửa hàng storeId mà merchant hiện tại sở hữu.")
+    public ResponseEntity<ApiResponse<PageResponse<SurpriseBagResponse>>> listByStore(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 100), Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ResponseEntity.ok(ApiResponse.ok(bagService.list(extractUserId(jwt), storeId, pageable)));
+    }
+
     @PatchMapping("/{bagId}")
     @Operation(operationId = "updateMerchantBag", summary = "Sửa thông tin túi")
     public ResponseEntity<ApiResponse<SurpriseBagResponse>> update(

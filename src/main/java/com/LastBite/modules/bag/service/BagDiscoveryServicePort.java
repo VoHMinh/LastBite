@@ -22,7 +22,7 @@ public interface BagDiscoveryServicePort {
                                           StoreCategory category, DietType dietType, BagType bagType,
                                           String district, String sort, Integer limit);
 
-    PublicBagDetailResponse detail(UUID bagId, UUID userId);
+    PublicBagDetailResponse detail(UUID bagId, UUID userId, Double lat, Double lng);
 
     List<PublicBagSummaryResponse> storeBags(UUID storeId, Integer limit);
 }

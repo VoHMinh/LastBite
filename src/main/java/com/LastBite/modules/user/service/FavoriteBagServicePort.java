@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface FavoriteBagServicePort {
 
-    List<PublicBagSummaryResponse> list(UUID userId);
+    List<PublicBagSummaryResponse> list(UUID userId, Double lat, Double lng);
 
     PublicBagSummaryResponse add(UUID userId, UUID bagId);
 

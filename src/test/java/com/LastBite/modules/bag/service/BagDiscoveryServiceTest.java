@@ -94,11 +94,11 @@ class BagDiscoveryServiceTest {
         UUID bagId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         BagDiscoveryProjection projection = row(DietType.VEGETARIAN, BagType.MEAL);
-        when(stockRepository.findPublicBagDetail(bagId, LocalDate.of(2026, 5, 25), LocalTime.of(10, 0)))
+        when(stockRepository.findPublicBagDetail(bagId, LocalDate.of(2026, 5, 25), LocalTime.of(10, 0), null, null))
                 .thenReturn(Optional.of(projection));
         when(favoriteStoreRepository.existsByUserIdAndStoreId(userId, projection.getStoreId())).thenReturn(true);
 
-        var detail = service.detail(bagId, userId);
+        var detail = service.detail(bagId, userId, null, null);
 
         assertTrue(detail.isFavoriteStore());
         assertEquals("logo.png", detail.getStoreLogoUrl());

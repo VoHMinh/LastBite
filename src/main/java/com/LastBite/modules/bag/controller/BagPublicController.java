@@ -84,10 +84,12 @@ public class BagPublicController {
     @Operation(operationId = "getBagDetail", summary = "Lấy chi tiết túi hôm nay")
     public ResponseEntity<ApiResponse<PublicBagDetailResponse>> detail(@AuthenticationPrincipal Jwt jwt,
                                                                        @PathVariable UUID bagId,
+                                                                       @RequestParam(required = false) Double lat,
+                                                                       @RequestParam(required = false) Double lng,
                                                                        @RequestParam(required = false) String source,
                                                                        HttpServletRequest request) {
         UUID userId = extractUserId(jwt);
-        PublicBagDetailResponse response = discoveryService.detail(bagId, userId);
+        PublicBagDetailResponse response = discoveryService.detail(bagId, userId, lat, lng);
         analyticsService.recordBagViewSafely(response.getStoreId(), response.getBagId(), userId, source, request);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }

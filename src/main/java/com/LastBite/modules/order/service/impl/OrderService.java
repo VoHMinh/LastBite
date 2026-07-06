@@ -319,10 +319,15 @@ public class OrderService implements OrderServicePort {
     }
 
     private String decryptPickupQrToken(Order order) {
-        if (order.getPickupQrTokenEncrypted() == null || order.getPickupQrTokenEncrypted().isBlank()) {
+        String encrypted = order.getPickupQrTokenEncrypted();
+        if (encrypted == null || encrypted.isBlank()) {
             return null;
         }
-        return sensitiveDataCipher.decrypt(order.getPickupQrTokenEncrypted());
+        try {
+            return sensitiveDataCipher.decrypt(encrypted);
+        } catch (IllegalStateException e) {
+            return null;
+        }
     }
 
     private OrderResponse toResponse(Order order, Payment payment, String pickupQrToken) {
