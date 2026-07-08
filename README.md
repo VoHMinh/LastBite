@@ -415,12 +415,17 @@ Important variables are listed in `.env.example`. The most relevant groups are:
 | JWT | `JWT_SIGNER_KEY`, `JWT_ACCESS_TOKEN_DURATION`, `JWT_REFRESH_TOKEN_DURATION` |
 | CORS | `APP_CORS_ALLOWED_ORIGINS` |
 | Auth cookie | `APP_AUTH_REFRESH_COOKIE_SECURE`, `APP_AUTH_REFRESH_COOKIE_SAME_SITE` |
-| Email | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` |
+| Email | `APP_MAIL_PROVIDER`, `APP_MAIL_FROM_ADDRESS`, `APP_MAIL_REPLY_TO`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` |
 | S3 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET_NAME` |
 | FCM | `APP_FCM_ENABLED`, `APP_FCM_CREDENTIALS_PATH`, `APP_FCM_CREDENTIALS_BASE64` |
 | Payments | `APP_PAYMENTS_GATEWAY`, `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` |
 
 Do not commit `.env` or any provider credentials.
+
+For production email, use a verified sending domain such as `mail.lastbite.vn`
+with SPF, DKIM, and DMARC DNS records before setting `APP_MAIL_PROVIDER=RESEND`.
+The auth endpoints stay the same for FE; only excessive resend/register attempts
+may now return `429`.
 
 ## Running Tests
 

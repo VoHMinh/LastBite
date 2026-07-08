@@ -63,6 +63,7 @@ public class SecurityConfig {
             "/api/v1/account-deletion/public-requests/verify",
             "/api/v1/account-deletion/public-requests/cancel",
             "/api/v1/payments/payos/webhook",
+            "/api/v1/mail/resend/webhook",
             "/api/v1/auth/forgot-password/**",
             "/api/v1/auth/reset-password/**",
             "/error",

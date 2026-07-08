@@ -77,6 +77,24 @@ app:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:8081,http://localhost:8082,https://willing-snowfield-good.ngrok-free.dev/}
   google: 
     client-id: ${GOOGLE_CLIENT_ID:}
+  mail:
+    provider: ${APP_MAIL_PROVIDER:SMTP}
+    from-name: ${APP_MAIL_FROM_NAME:LastBite}
+    from-address: ${APP_MAIL_FROM_ADDRESS:no-reply@mail.lastbite.vn}
+    reply-to: ${APP_MAIL_REPLY_TO:support@lastbite.vn}
+    timeout-millis: ${APP_MAIL_TIMEOUT_MILLIS:5000}
+    max-attempts: ${APP_MAIL_MAX_ATTEMPTS:2}
+    resend:
+      api-key: ${RESEND_API_KEY:}
+      base-url: ${RESEND_BASE_URL:https://api.resend.com}
+      webhook-secret: ${RESEND_WEBHOOK_SECRET:}
+      require-webhook-signature: ${RESEND_REQUIRE_WEBHOOK_SIGNATURE:true}
+    rate-limit:
+      enabled: ${APP_MAIL_RATE_LIMIT_ENABLED:true}
+      per-email-per-minute: ${APP_MAIL_RATE_LIMIT_PER_EMAIL_PER_MINUTE:1}
+      per-email-per-hour: ${APP_MAIL_RATE_LIMIT_PER_EMAIL_PER_HOUR:5}
+      per-ip-per-minute: ${APP_MAIL_RATE_LIMIT_PER_IP_PER_MINUTE:10}
+      per-ip-per-hour: ${APP_MAIL_RATE_LIMIT_PER_IP_PER_HOUR:60}
   auth:
     email-verification-url: ${APP_AUTH_EMAIL_VERIFICATION_URL:http://localhost:8080/api/v1/auth/verify-email-link}
     refresh-cookie-secure: ${APP_AUTH_REFRESH_COOKIE_SECURE:false}

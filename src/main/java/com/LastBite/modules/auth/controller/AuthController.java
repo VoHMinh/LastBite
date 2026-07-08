@@ -26,6 +26,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -174,9 +175,9 @@ public class AuthController {
 
     @GetMapping("/test-email")
     @Operation(summary = "Test gửi email")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> testEmail(@RequestParam String to) {
-        emailService.sendVerificationLinkEmail(to, "Test User",
-                "http://localhost:3000/verify?token=test-token-12345");
+        emailService.sendTestEmail(to);
         return ResponseEntity.ok(ApiResponse.ok("Email sent (check async logs)"));
     }
 

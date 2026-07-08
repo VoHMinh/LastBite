@@ -2,6 +2,7 @@ package com.LastBite.modules.auth.service.impl;
 
 import com.LastBite.common.exception.ApiException;
 import com.LastBite.common.exception.ErrorCode;
+import com.LastBite.common.service.EmailRateLimitService;
 import com.LastBite.common.service.EmailService;
 import com.LastBite.modules.auth.dto.request.LoginRequest;
 import com.LastBite.modules.auth.dto.request.StoreLoginRequest;
@@ -52,6 +53,7 @@ public class AuthService implements AuthServicePort {
     private final StoreServicePort storeService;
     private final EmailVerificationTokenRepository emailTokenRepository;
     private final EmailService emailService;
+    private final EmailRateLimitService emailRateLimitService;
     private final RoleAssignmentService roleAssignmentService;
     private final MerchantStoreMemberRepository storeMemberRepository;
     private final MediaUrlService mediaUrlService;
@@ -411,6 +413,8 @@ public class AuthService implements AuthServicePort {
     // ── Private helpers ──────────────────────────────────────
 
     private void sendOtp(User user) {
+        emailRateLimitService.checkAuthEmailSend(user.getEmail(), "otp");
+
         // Xóa mọi token chưa xác minh trước đó
         emailTokenRepository.deleteUnverifiedByUserId(user.getId());
 
@@ -429,6 +433,8 @@ public class AuthService implements AuthServicePort {
     }
 
     private void sendVerificationLink(User user) {
+        emailRateLimitService.checkAuthEmailSend(user.getEmail(), "verification-link");
+
         emailTokenRepository.deleteUnverifiedByUserId(user.getId());
 
         String rawToken = jwtService.generateRefreshToken();
